@@ -1,0 +1,1581 @@
+// NavHeader.vue 中的所有样式内容都放在这里
+/* 导航整体样式 */
+.nav {
+  height: 60px;
+  background: #ffffff;
+  color: #333;
+  padding: 0 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* 导航左侧 */
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* 调整间距 */
+}
+
+.welcome {
+  font-size: 14px; /* 调整欢迎语字号 */
+  color: #555;
+}
+
+.logo {
+  height: 35px; /* 调整logo大小 */
+  width: auto;
+  transition: transform 0.2s ease;
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+.user-info {
+  position: relative; /* 为了下拉菜单定位 */
+  cursor: pointer; /* 添加手型光标 */
+}
+
+.user-info .avatar {
+  height: 32px;
+  width: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #f0f2f5;
+  transition: all 0.3s;
+  &:hover {
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+  }
+}
+
+/* 导航中部搜索框 */
+.nav-center {
+  flex: 1;
+  max-width: 400px;
+  margin: 0 20px; /* 调整边距 */
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px 15px; /* 调整内边距 */
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  font-size: 14px;
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+  }
+}
+
+/* 导航右侧 */
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 15px; /* 调整右侧元素间距 */
+}
+
+.notification-icon-link {
+  text-decoration: none;
+  color: inherit;
+  position: relative; /* 为了角标定位 */
+}
+
+.notification-icon {
+  font-size: 22px; /* 调整图标大小 */
+  color: #666;
+  cursor: pointer;
+}
+
+/* 自定义消息角标样式 */
+.notification-badge-custom {
+  position: absolute;
+  top: -5px;
+  right: -8px;
+  background-color: red;
+  color: white;
+  border-radius: 50%;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-weight: bold;
+  border: 1px solid white; /* 给角标一个白色边框，使其更突出 */
+}
+
+.quick-entries {
+  display: flex;
+  gap: 12px; /* 调整快速入口间距 */
+}
+
+.quick-entries .icon {
+  font-size: 22px; /* 调整图标大小 */
+  color: #666;
+  cursor: pointer;
+  transition: color 0.3s;
+  position: relative;
+  text-decoration: none;
+  &:hover {
+    color: #007bff;
+    &::after {
+      content: "";
+      position: absolute;
+      bottom: -4px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80%;
+      height: 2px;
+      background: #007bff;
+    }
+  }
+}
+
+/* 用户下拉菜单样式 */
+.user-dropdown-menu-custom {
+  position: absolute;
+  top: calc(100% + 5px); /* 定位在头像下方，并留出一点间隙 */
+  right: 0;
+  background-color: #fff;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 120px;
+  padding: 5px 0;
+}
+
+.user-dropdown-menu-custom a {
+  display: block;
+  padding: 8px 15px;
+  text-decoration: none;
+  color: #333;
+  font-size: 14px;
+  white-space: nowrap;
+  &:hover {
+    background-color: #f5f5f5;
+  }
+}
+
+// Styles for Alarm.vue
+.alarm-page-styles {
+  .alarm-page {
+    padding: 20px;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    background-color: #f4f6f8;
+    min-height: calc(100vh - 60px); /* Assuming header height is 60px */
+  }
+
+  .page-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 10px;
+  }
+
+  .filter-controls {
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .filter-controls label {
+    margin-right: 10px;
+    font-weight: 500;
+    color: #555;
+  }
+
+  .filter-controls select {
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    font-size: 14px;
+  }
+
+  .alarm-summary {
+    margin-bottom: 20px;
+    padding: 10px 15px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    color: #495057;
+    font-size: 14px;
+  }
+
+  .alarm-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden; /* Ensures border-radius is applied to table */
+  }
+
+  .alarm-table th,
+  .alarm-table td {
+    border: 1px solid #e0e0e0;
+    padding: 12px 15px;
+    text-align: left;
+    font-size: 14px;
+  }
+
+  .alarm-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .alarm-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+
+  .alarm-table tbody tr:hover {
+    background-color: #f1f1f1;
+  }
+
+  .no-data {
+    text-align: center;
+    color: #777;
+    padding: 20px;
+    font-style: italic;
+  }
+
+  .alarm-level-tag {
+    padding: 4px 8px;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 500;
+    display: inline-block;
+    text-align: center;
+    min-width: 50px;
+  }
+
+  .level-critical {
+    background-color: #dc3545; /* Red */
+  }
+
+  .level-warning {
+    background-color: #ffc107; /* Orange */
+    color: #333; /* Darker text for better contrast on orange */
+  }
+
+  .level-info {
+    background-color: #fd7e14; /* Yellow - using a bootstrap orange as yellow might be too light */
+  }
+
+  .status-resolved-row td {
+    color: #6c757d; /* Gray text for resolved alarms */
+    /* text-decoration: line-through; */ /* Optional: strike-through for resolved items */
+  }
+
+  .action-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    margin-right: 5px;
+    transition: background-color 0.2s ease;
+  }
+
+  .process-btn {
+    background-color: #007bff;
+    color: white;
+  }
+
+  .process-btn:hover:not(:disabled) {
+    background-color: #0056b3;
+  }
+
+  .resolve-btn {
+    background-color: #28a745;
+    color: white;
+  }
+
+  .resolve-btn:hover:not(:disabled) {
+    background-color: #1e7e34;
+  }
+
+  .action-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+  }
+}
+
+// Styles for Connect.vue
+.connect-page-styles {
+  .connect-page {
+    padding: 20px;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    background-color: #f4f6f8;
+    min-height: calc(100vh - 60px); /* Assuming header height is 60px */
+  }
+
+  .page-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 10px;
+  }
+
+  .filter-controls {
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  .filter-controls label {
+    margin-right: 10px;
+    font-weight: 500;
+    color: #555;
+  }
+
+  .filter-controls select {
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    font-size: 14px;
+  }
+
+  .no-requests {
+    text-align: center;
+    padding: 30px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    color: #777;
+    font-size: 16px;
+  }
+
+  .requests-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+
+  .request-card {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    border-left: 5px solid #007bff; /* Default for pending */
+  }
+
+  .request-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .card-approved {
+    border-left-color: #28a745; /* Green for approved */
+  }
+
+  .card-rejected {
+    border-left-color: #dc3545; /* Red for rejected */
+  }
+
+  .card-header {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .protocol-icon {
+    font-size: 12px;
+    font-weight: bold;
+    color: #fff;
+    background-color: #6c757d;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-right: 10px;
+  }
+
+  .device-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+    flex-grow: 1;
+  }
+
+  .request-status-tag {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #fff;
+  }
+
+  .status-pending {
+    background-color: #007bff;
+  }
+
+  .status-approved {
+    background-color: #28a745;
+  }
+
+  .status-rejected {
+    background-color: #dc3545;
+  }
+
+  .card-body {
+    padding: 15px;
+    font-size: 14px;
+    color: #555;
+    flex-grow: 1;
+  }
+
+  .card-body p {
+    margin: 0 0 8px 0;
+  }
+
+  .card-body p strong {
+    color: #333;
+  }
+
+  .card-footer {
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-top: 1px solid #eee;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .processed-footer p {
+    margin: 0;
+    font-size: 13px;
+    color: #6c757d;
+    width: 100%;
+    text-align: center;
+  }
+
+  .action-btn {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+  }
+
+  .action-btn:hover {
+    transform: scale(1.05);
+  }
+
+  .approve-btn {
+    background-color: #28a745;
+    color: white;
+  }
+
+  .approve-btn:hover {
+    background-color: #218838;
+  }
+
+  .reject-btn {
+    background-color: #dc3545;
+    color: white;
+  }
+
+  .reject-btn:hover {
+    background-color: #c82333;
+  }
+}
+
+// Styles for Admin.vue (Personal Center Page)
+.admin-page-styles {
+  .page-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+    h1 {
+      font-size: 2rem;
+      color: #333;
+    }
+  }
+
+  .user-profile-card {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+
+    .avatar-section {
+      .user-avatar {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #ddd;
+      }
+    }
+
+    .info-section {
+      h2 {
+        font-size: 1.8rem;
+        margin-bottom: 0.5rem;
+        color: #333;
+      }
+      p {
+        font-size: 0.9rem;
+        color: #666;
+        margin-bottom: 0.3rem;
+        &.user-id {
+          font-weight: bold;
+        }
+      }
+    }
+  }
+
+  .permissions-section {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+
+    h3 {
+      font-size: 1.5rem;
+      color: #333;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #eee;
+    }
+
+    .permissions-list {
+      list-style: none;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+
+      .permission-item {
+        .permission-link {
+          display: flex;
+          align-items: center;
+          padding: 0.8rem 1rem;
+          background-color: #f9f9f9;
+          border-radius: 6px;
+          text-decoration: none;
+          color: #555;
+          transition: background-color 0.3s ease, color 0.3s ease;
+
+          &:hover {
+            background-color: #e9e9e9;
+            color: #333;
+          }
+
+          .permission-icon {
+            margin-right: 0.8rem;
+            font-size: 1.2rem;
+          }
+          .permission-name {
+            font-size: 0.95rem;
+          }
+        }
+      }
+    }
+    .no-permissions {
+      color: #777;
+      font-style: italic;
+    }
+  }
+
+  .account-actions-section {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+
+    h3 {
+      font-size: 1.5rem;
+      color: #333;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #eee;
+    }
+
+    .action-form {
+      margin-bottom: 2rem;
+      h4 {
+        font-size: 1.2rem;
+        color: #444;
+        margin-bottom: 1rem;
+      }
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: #555;
+      }
+      input[type="text"],
+      input[type="password"] {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+        font-size: 0.95rem;
+        &:focus {
+          border-color: #007bff;
+          outline: none;
+          box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+      }
+    }
+
+    .submit-btn {
+      background-color: #007bff;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background-color 0.3s ease;
+      &:hover {
+        background-color: #0056b3;
+      }
+      &:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
+    }
+
+    .message {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      &.success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      &.error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+    }
+
+    .form-divider {
+      border: 0;
+      height: 1px;
+      background-color: #eee;
+      margin: 2.5rem 0;
+    }
+  }
+
+  .personal-center-page {
+    padding: 20px;
+    background-color: #f4f6f8;
+    min-height: calc(100vh - 60px); // 假设头部导航栏高度为60px
+  }
+
+  .page-header {
+    margin-bottom: 25px;
+    h1 {
+      font-size: 24px;
+      color: #333;
+      font-weight: 600;
+    }
+  }
+
+  .user-profile-card {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    padding: 25px;
+    display: flex;
+    align-items: center;
+    gap: 25px;
+    margin-bottom: 30px;
+  }
+
+  .avatar-section {
+    .user-avatar {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid #007bff;
+    }
+  }
+
+  .info-section {
+    h2 {
+      font-size: 22px;
+      color: #2c3e50;
+      margin-bottom: 8px;
+    }
+    p {
+      font-size: 14px;
+      color: #555;
+      line-height: 1.6;
+      margin-bottom: 4px;
+      &.user-role {
+        font-weight: 500;
+        color: #007bff;
+      }
+    }
+  }
+
+  .permissions-section {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    padding: 25px;
+
+    h3 {
+      font-size: 20px;
+      color: #333;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+    }
+  }
+
+  .permissions-list {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 15px;
+  }
+
+  .permission-item {
+    background-color: #f9f9f9;
+    border-radius: 6px;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+
+    &:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+    }
+  }
+
+  .permission-link {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    text-decoration: none;
+    color: #34495e;
+    font-size: 15px;
+    font-weight: 500;
+
+    .permission-icon {
+      margin-right: 12px;
+      font-size: 20px;
+    }
+
+    &:hover {
+      color: #007bff;
+    }
+  }
+
+  .no-permissions {
+    color: #777;
+    font-style: italic;
+  }
+}
+
+// Styles for Dashboard.vue
+.dashboard-page-styles {
+  .dashboard-page {
+    padding: 20px;
+    background-color: #1a1a2e; /* Dark blue/purple background */
+    color: #e0e0e0; /* Light text color for contrast */
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto; /* Allow scrolling if content overflows */
+  }
+
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #3a3a5e;
+  }
+
+  .dashboard-header h1 {
+    font-size: 28px;
+    color: #ffffff;
+    font-weight: bold;
+  }
+
+  .current-time {
+    font-size: 18px;
+    color: #a0a0c0;
+  }
+
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(
+      4,
+      1fr
+    ); /* 4 columns for KPIs, then adjust for larger cards */
+    grid-template-rows: auto auto 1fr; /* Auto for KPIs, auto for next row, 1fr for remaining space */
+    gap: 20px;
+    flex-grow: 1;
+  }
+
+  .kpi-grid {
+    grid-column: 1 / -1; /* Span all 4 columns */
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+
+  .kpi-card {
+    background-color: #2c2c4e; /* Darker card background */
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    border-left: 5px solid #4a4aff;
+  }
+
+  .kpi-card h3 {
+    font-size: 16px;
+    color: #a0a0c0;
+    margin-bottom: 10px;
+    font-weight: normal;
+  }
+
+  .kpi-value {
+    font-size: 32px;
+    font-weight: bold;
+    color: #ffffff;
+    margin-bottom: 5px;
+  }
+
+  .kpi-change {
+    font-size: 14px;
+  }
+  .kpi-change.positive {
+    color: #4caf50;
+  }
+  .kpi-change.negative {
+    color: #f44336;
+  }
+
+  .chart-card {
+    background-color: #2c2c4e;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chart-card h4 {
+    font-size: 18px;
+    color: #c0c0e0;
+    margin-bottom: 15px;
+    text-align: center;
+    border-bottom: 1px solid #3a3a5e;
+    padding-bottom: 10px;
+  }
+
+  .chart-placeholder {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #1e1e3f;
+    border-radius: 4px;
+    color: #7070a0;
+    font-style: italic;
+    min-height: 150px; /* Minimum height for placeholders */
+  }
+
+  .large-card {
+    grid-column: span 2; /* Make this card span 2 columns */
+  }
+
+  .device-status-map {
+    grid-column: 1 / span 2; /* Span first two columns in the second row */
+    grid-row: 2;
+    flex-direction: row; /* Arrange sections side-by-side */
+    gap: 20px;
+  }
+
+  .device-status-section,
+  .map-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .device-status-section h4,
+  .map-section h4 {
+    text-align: left;
+    padding-left: 0;
+  }
+
+  .status-item {
+    margin-bottom: 8px;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+  }
+
+  .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 8px;
+    display: inline-block;
+  }
+  .status-dot.online {
+    background-color: #4caf50;
+  }
+  .status-dot.offline {
+    background-color: #757575;
+  }
+  .status-dot.error {
+    background-color: #f44336;
+  }
+
+  .tall-placeholder {
+    min-height: 180px; /* Taller placeholder for device status chart */
+  }
+
+  .map-placeholder {
+    min-height: 250px; /* Taller placeholder for map */
+  }
+
+  .recent-alarms {
+    grid-column: 3 / span 2; /* Span last two columns in the second row */
+    grid-row: 2;
+  }
+
+  .alarm-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1;
+    overflow-y: auto; /* Allow scrolling for alarm list */
+    max-height: 250px; /* Limit height */
+  }
+
+  .alarm-item {
+    padding: 8px 10px;
+    border-bottom: 1px solid #3a3a5e;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .alarm-item:last-child {
+    border-bottom: none;
+  }
+
+  .alarm-item.low {
+    color: #66bb6a;
+  } /* Softer green for low */
+  .alarm-item.medium {
+    color: #ffa726;
+  } /* Orange for medium */
+  .alarm-item.high {
+    color: #ef5350;
+  } /* Softer red for high */
+
+  .alarm-time {
+    color: #a0a0c0;
+    margin-right: 10px;
+  }
+
+  .alarm-content {
+    flex-grow: 1;
+    color: #e0e0e0;
+  }
+
+  /* Adjust grid for the third row (single chart spanning all columns) */
+  .dashboard-grid > .chart-card:nth-child(3) {
+    /* This targets the '关键数据趋势' card */
+    grid-column: 1 / -1; /* Span all 4 columns */
+    grid-row: 3;
+  }
+
+  /* Responsive adjustments (optional) */
+  @media (max-width: 1200px) {
+    .kpi-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .dashboard-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .large-card,
+    .recent-alarms,
+    .dashboard-grid > .chart-card:nth-child(3) {
+      grid-column: span 2; /* All larger cards span full width on smaller screens */
+    }
+    .device-status-map {
+      flex-direction: column; /* Stack map and status on smaller screens */
+    }
+  }
+
+  @media (max-width: 768px) {
+    .kpi-grid,
+    .dashboard-grid {
+      grid-template-columns: 1fr; /* Single column layout */
+    }
+    .large-card,
+    .recent-alarms,
+    .dashboard-grid > .chart-card:nth-child(3) {
+      grid-column: span 1;
+    }
+    .dashboard-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .current-time {
+      margin-top: 5px;
+    }
+  }
+}
+
+// Styles for Device.vue
+.device-page-styles {
+  .device-page {
+    padding: 20px;
+    background-color: #f0f2f5;
+    min-height: calc(100vh - 60px);
+  }
+
+  .actions-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 16px;
+    background-color: #fff;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .search-input {
+    padding: 8px 12px;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 280px;
+  }
+
+  .status-tabs {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+  }
+
+  .tab-btn {
+    padding: 8px 16px;
+    border: 1px solid #d9d9d9;
+    background-color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  .tab-btn.active {
+    background-color: #1890ff;
+    color: white;
+    border-color: #1890ff;
+  }
+
+  .tab-btn:not(.active):hover {
+    border-color: #1890ff;
+    color: #1890ff;
+  }
+
+  .loading-spinner {
+    text-align: center;
+    padding: 40px;
+    font-size: 16px;
+    color: #555;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #fff;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    font-size: 14px;
+  }
+
+  thead th {
+    background-color: #fafafa;
+    color: rgba(0, 0, 0, 0.85);
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 500;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  tbody td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    color: rgba(0, 0, 0, 0.65);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  tbody tr:hover {
+    background-color: #e6f7ff; /* 鼠标悬浮时高亮行 */
+  }
+
+  .status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+  }
+
+  .status-online {
+    background-color: #e6f7ff; /* 淡蓝色背景 */
+    color: #1890ff; /* 蓝色文字 */
+    border: 1px solid #91d5ff; /* 浅蓝色边框 */
+  }
+
+  .status-offline {
+    background-color: #fff1f0; /* 淡红色背景 */
+    color: #f5222d; /* 红色文字 */
+    border: 1px solid #ffa39e; /* 浅红色边框 */
+  }
+
+  .btn {
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    margin-right: 8px;
+    border: 1px solid transparent;
+  }
+  .btn:last-child {
+    margin-right: 0;
+  }
+
+  .btn-primary {
+    background-color: #1890ff;
+    color: white;
+    border-color: #1890ff;
+  }
+  .btn-primary:hover {
+    background-color: #40a9ff;
+  }
+
+  .btn-warning {
+    background-color: #fff;
+    color: #faad14;
+    border-color: #ffe58f;
+  }
+  .btn-warning:hover {
+    background-color: #fffbe6;
+    border-color: #faad14;
+    color: #d48806;
+  }
+
+  .btn-danger {
+    background-color: #fff;
+    color: #f5222d;
+    border-color: #ffa39e;
+  }
+  .btn-danger:hover {
+    background-color: #fff1f0;
+    border-color: #f5222d;
+    color: #cf1322;
+  }
+
+  .btn-info {
+    background-color: #fff;
+    color: #13c2c2;
+    border-color: #87e8de;
+  }
+  .btn-info:hover {
+    background-color: #e6fffb;
+    border-color: #13c2c2;
+    color: #08979c;
+  }
+
+  .btn-sm {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  .no-data {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+    background-color: #fff;
+    border-radius: 4px;
+    margin-top: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+}
+
+// Styles for News.vue
+.news-page-styles {
+  .news-page {
+    padding: 25px;
+    background-color: #f4f6f8;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    color: #333;
+  }
+
+  .news-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .news-header h1 {
+    font-size: 2rem;
+    color: #2c3e50;
+    margin: 0;
+  }
+
+  .filters {
+    display: flex;
+    gap: 15px;
+  }
+
+  .filter-select {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background-color: white;
+    font-size: 0.9rem;
+    min-width: 150px;
+  }
+
+  .news-list {
+    display: grid;
+    gap: 20px;
+  }
+
+  .no-news {
+    text-align: center;
+    padding: 40px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  }
+
+  .no-news p {
+    font-size: 1.1rem;
+    color: #777;
+  }
+
+  .news-card {
+    background-color: #ffffff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    position: relative; /* For unread badge positioning */
+  }
+
+  .news-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  }
+
+  .news-card.unread {
+    border-left: 4px solid #007bff; /* 蓝色标记未读 */
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+
+  .news-title {
+    font-size: 1.3rem;
+    color: #34495e;
+    margin: 0 0 5px 0;
+  }
+
+  .news-date {
+    font-size: 0.85rem;
+    color: #7f8c8d;
+    white-space: nowrap;
+    margin-left: 15px;
+  }
+
+  .news-summary {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #555;
+    margin-bottom: 15px;
+  }
+
+  .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    color: #7f8c8d;
+  }
+
+  .news-category {
+    background-color: #ecf0f1;
+    padding: 3px 8px;
+    border-radius: 4px;
+    color: #7f8c8d;
+  }
+
+  .btn-view-details {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+  }
+
+  .btn-view-details:hover {
+    background-color: #0056b3;
+  }
+
+  .unread-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background-color: #e74c3c;
+    color: white;
+    padding: 3px 7px;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    font-weight: bold;
+  }
+
+  /* 弹窗样式 (复用并调整自Admin.vue) */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+
+  .modal-content {
+    background-color: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.25);
+    width: 90%;
+    max-width: 650px; /* 详情弹窗可以宽一些 */
+  }
+
+  .news-detail-modal h2 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #2c3e50;
+    font-size: 1.6rem;
+  }
+
+  .detail-date {
+    font-size: 0.9rem;
+    color: #777;
+    margin-bottom: 15px;
+  }
+
+  .detail-content {
+    line-height: 1.7;
+    margin-top: 15px;
+    margin-bottom: 20px;
+    max-height: 60vh; /* 限制内容高度，可滚动 */
+    overflow-y: auto;
+  }
+
+  .detail-content p {
+    margin-bottom: 1em;
+  }
+  .detail-content strong {
+    color: #333;
+  }
+  .detail-content ul {
+    padding-left: 20px;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+  }
+
+  .btn-secondary {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  .btn-secondary:hover {
+    background-color: #545b62;
+  }
+}
+
+// Styles for Statistics.vue
+.statistics-page-styles {
+  .statistics-page {
+    padding: 20px;
+    background-color: #f4f6f8;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .page-header h1 {
+    font-size: 24px;
+    color: #333;
+  }
+
+  .actions select {
+    margin-right: 10px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+  }
+
+  .export-btn {
+    padding: 8px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  .export-btn:hover {
+    background-color: #0056b3;
+  }
+
+  .summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+
+  .summary-card {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    text-align: center;
+  }
+
+  .summary-card h3 {
+    font-size: 16px;
+    color: #555;
+    margin-bottom: 10px;
+  }
+
+  .summary-card .count {
+    font-size: 28px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+  }
+
+  .summary-card .change {
+    font-size: 12px;
+  }
+
+  .summary-card .change.positive {
+    color: #4caf50;
+  }
+
+  .summary-card .change.negative {
+    color: #f44336;
+  }
+
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    flex-grow: 1;
+  }
+
+  .chart-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .chart-container h4 {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 15px;
+    text-align: center;
+  }
+
+  .chart-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px; /* 或者根据内容调整 */
+    background-color: #e9ecef;
+    border-radius: 4px;
+    color: #6c757d;
+    font-style: italic;
+  }
+}
