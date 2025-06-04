@@ -4,7 +4,19 @@
     <meta charset="UTF-8">
     <link rel="icon" href="/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vite App</title>
+    <title>IoT 设备管理平台</title>
+    <!-- 添加高德地图安全密钥配置 -->
+    <script type="text/javascript">
+      window._AMapSecurityConfig = {
+        securityJsCode: '2f29ed3b38f44935a0559729ff5eadb9',
+      }
+    </script>
+    <!-- 高德地图样式 -->
+    <link rel="stylesheet" href="https://cache.amap.com/lbs/static/main1119.css"/>
+    <!-- 高德地图API，加载更多插件支持复杂搜索 -->
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.15&key=1d109d068afa9c4a891bed0a7aebdcb0&plugin=AMap.Geocoder,AMap.ToolBar,AMap.Scale,AMap.MapType,AMap.Geolocation,AMap.DistrictSearch,AMap.Autocomplete,AMap.PlaceSearch,AMap.AdvancedInfoWindow"></script>
+    <!-- 高德UI库 -->
+    <script type="text/javascript" src="https://webapi.amap.com/ui/1.1/main.js"></script>
   </head>
   <body>
     <div id="app"></div>

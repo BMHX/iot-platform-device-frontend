@@ -17,25 +17,16 @@ export default defineConfig({
   },
   server: { 
     proxy: {
-      // 字符串简写写法
-      // '/foo': 'http://localhost:4567',
-      // 选项写法
       '/api': { 
-        target: 'http://localhost:8085', // 更新: 后端服务实际地址
+        target: 'http://localhost:8087', // 后端服务地址
         changeOrigin: true,
-        // rewrite: (path) => path.replace(/^\/api/, '') 
+        rewrite: (path) => path
       },
-      '/lh-cloud-wl': {
-        target: 'http://localhost:8085', // 更新: 后端服务的地址
-        changeOrigin: true, 
-        rewrite: (path) => path.replace(/^\/lh-cloud-wl/, ''), 
-      },
-      // 正则表达式写法
-      // '^/fallback/.*': {
-      //   target: 'http://jsonplaceholder.typicode.com',
-      //   changeOrigin: true,
-      //   rewrite: (path) => path.replace(/^\/fallback/, '')
-      // }
+      '/iot': {
+        target: 'http://localhost:8086', // ymx-admin-iot模块的后端地址
+        changeOrigin: true,
+        rewrite: (path) => path
+      }
     }
   }
 })

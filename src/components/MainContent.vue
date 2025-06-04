@@ -1,7 +1,5 @@
 <template>
-  <div class="right">
-    <router-view></router-view>
-  </div>
+  <router-view />
 </template>
 
 <style lang="scss" scoped>

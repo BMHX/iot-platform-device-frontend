@@ -1,50 +1,151 @@
 <template>
-  <div v-if="visible" class="modal-overlay" @click.self="closeModal">
-    <div class="modal-content">
-      <h3>{{ formTitle }}</h3>
-      <form @submit.prevent="submitForm">
-        <div class="form-group">
-          <label for="deviceName">设备名称:</label>
-          <input type="text" id="deviceName" v-model="formData.name" required>
+  <el-dialog
+    v-model="dialogVisible"
+    :title="formTitle"
+    width="600px"
+    @close="closeModal"
+  >
+    <el-form :model="formData" label-width="100px" label-position="right">
+      <el-form-item label="设备名称" required>
+        <el-input v-model="formData.deviceName" />
+      </el-form-item>
+      <el-form-item label="设备图片" required>
+        <el-input 
+          v-model="formData.deviceCode" 
+          placeholder="请输入图片URL或设备编码"
+        />
+        <div v-if="isImageUrl(formData.deviceCode)" class="image-preview">
+          <el-image 
+            :src="formData.deviceCode" 
+            style="width: 150px; height: 90px" 
+            fit="cover">
+            <template #error>
+              <div class="image-error">
+                <el-icon><Picture /></el-icon>
+                <span>图片加载失败</span>
+              </div>
+            </template>
+          </el-image>
         </div>
-        <div class="form-group">
-          <label for="deviceType">设备类型:</label>
-          <input type="text" id="deviceType" v-model="formData.type" required>
+        <div v-else class="tip-text">
+          提示：如果输入以http开头的URL，将显示为图片
         </div>
-        <div class="form-group">
-          <label for="deviceLocation">位置描述:</label> <input type="text" id="deviceLocation" v-model="formData.location">
+      </el-form-item>
+      <el-form-item label="设备类型" required>
+        <el-input v-model="formData.deviceType" />
+      </el-form-item>
+      <el-form-item label="状态">
+        <el-select v-model="formData.status" style="width: 100%">
+          <el-option label="在线" :value="1" />
+          <el-option label="离线" :value="0" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="位置信息">
+        <div class="location-selector">
+          <div class="location-info" v-if="formData.latitude && formData.longitude">
+            <div><strong>经度:</strong> {{ formData.longitude }}</div>
+            <div><strong>纬度:</strong> {{ formData.latitude }}</div>
+          </div>
+          <el-button type="primary" size="small" @click="showMapSelector = true">
+            {{ formData.latitude && formData.longitude ? '修改位置' : '选择位置' }}
+          </el-button>
         </div>
-        <div class="form-group">
-          <label for="deviceLongitude">经度:</label>
-          <input type="number" step="any" id="deviceLongitude" v-model.number="formData.longitude">
+      </el-form-item>
+      <el-form-item label="地区信息">
+        <div v-if="isValidCoordinates" class="location-container">
+          <div v-if="locationInfo && !isLoadingLocation">
+            <div>{{ locationInfo.formatted_address }}</div>
+            <div class="location-detail">
+              <span>省份: {{ locationInfo.province }}</span>
+              <span>城市: {{ locationInfo.city }}</span>
+              <span>区县: {{ locationInfo.district }}</span>
+            </div>
+          </div>
+          <div v-else-if="isLoadingLocation" class="loading-text">
+            正在获取地区信息...
+          </div>
+          <el-button 
+            v-else 
+            type="primary" 
+            size="small"
+            @click="loadLocationInfo"
+          >
+            获取地区信息
+          </el-button>
         </div>
-        <div class="form-group">
-          <label for="deviceLatitude">纬度:</label>
-          <input type="number" step="any" id="deviceLatitude" v-model.number="formData.latitude">
+        <div v-else class="tip-text">
+          请先选择位置
         </div>
-        <div class="form-group">
-          <label for="deviceFirmware">固件版本:</label>
-          <input type="text" id="deviceFirmware" v-model="formData.firmware">
-        </div>
-        <div class="form-group">
-          <label for="deviceStatus">状态:</label>
-          <select id="deviceStatus" v-model="formData.status">
-            <option value="online">在线</option>
-            <option value="offline">离线</option>
-          </select>
-        </div>
+      </el-form-item>
+      <el-form-item label="集成状态">
+        <el-select v-model="formData.deviceIntegration" style="width: 100%">
+          <el-option label="未集成" :value="0" />
+          <el-option label="已集成" :value="1" />
+          <el-option label="已拒绝" :value="3" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="创建时间">
+        <el-date-picker
+          v-model="formData.createdAt"
+          type="datetime"
+          placeholder="选择创建时间"
+          format="YYYY-MM-DD HH:mm:ss"
+          value-format="YYYY-MM-DD HH:mm:ss"
+          style="width: 100%"
+        />
+      </el-form-item>
+      <el-form-item label="更新时间">
+        <el-date-picker
+          v-model="formData.updatedAt"
+          type="datetime"
+          placeholder="选择更新时间"
+          format="YYYY-MM-DD HH:mm:ss"
+          value-format="YYYY-MM-DD HH:mm:ss"
+          style="width: 100%"
+        />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <span class="dialog-footer">
+        <el-button @click="closeModal">取消</el-button>
+        <el-button type="primary" @click="submitForm">保存</el-button>
+      </span>
+    </template>
+  </el-dialog>
 
-        <div class="form-actions">
-          <button type="button" @click="closeModal" class="btn btn-secondary">取消</button>
-          <button type="submit" class="btn btn-primary">保存</button>
-        </div>
-      </form>
-    </div>
-  </div>
+  <!-- 地图选择对话框 -->
+  <el-dialog
+    v-model="showMapSelector"
+    title="选择设备位置"
+    width="800px"
+    :close-on-click-modal="false"
+    :append-to-body="true"
+    destroy-on-close
+  >
+    <map-selector
+      :initial-longitude="formData.longitude || 116.397428"
+      :initial-latitude="formData.latitude || 39.90923"
+      @location-selected="handleLocationSelected"
+    />
+    <template #footer>
+      <div class="dialog-footer">
+        <el-button @click="closeMapSelector">取消</el-button>
+      </div>
+    </template>
+  </el-dialog>
 </template>
 
 <script>
+import { ElMessage } from 'element-plus';
+import { Picture } from '@element-plus/icons-vue';
+import { getLocation } from '@/api/location';
+import MapSelector from './MapSelector.vue';
+
 export default {
+  components: {
+    Picture,
+    MapSelector
+  },
   props: {
     visible: {
       type: Boolean,
@@ -57,157 +158,252 @@ export default {
   },
   data() {
     return {
+      dialogVisible: false,
       formData: {
         id: null,
-        name: '',
-        type: '',
-        location: '', // 保留，用于描述性位置
-        longitude: null, // 新增经度
-        latitude: null,  // 新增纬度
-        firmware: '',
-        status: 'online' // 默认状态
-      }
+        deviceName: '',
+        deviceCode: '',
+        deviceType: '',
+        status: 1,
+        latitude: '',
+        longitude: '',
+        deviceIntegration: 0,
+        adminId: 1 // 固定使用管理员ID为1
+      },
+      locationInfo: null,
+      isLoadingLocation: false,
+      showMapSelector: false
     };
   },
   computed: {
     formTitle() {
       return this.editingDeviceData ? '编辑设备' : '添加新设备';
+    },
+    isValidCoordinates() {
+      return this.formData.latitude && this.formData.longitude;
+    },
+    isEditMode() {
+      return this.editingDeviceData !== null;
     }
   },
   watch: {
     visible(newVal) {
+      this.dialogVisible = newVal;
       if (newVal) {
         if (this.editingDeviceData) {
           // 编辑模式，填充表单
-          this.formData = { ...this.editingDeviceData };
+          this.formData = {
+            id: this.editingDeviceData.id,
+            deviceName: this.editingDeviceData.deviceName || '',
+            deviceCode: this.editingDeviceData.deviceCode || '',
+            deviceType: this.editingDeviceData.deviceType || '',
+            status: this.editingDeviceData.status,
+            latitude: this.editingDeviceData.latitude || '',
+            longitude: this.editingDeviceData.longitude || '',
+            deviceIntegration: this.editingDeviceData.deviceIntegration || 0,
+            adminId: 1,
+            createdAt: this.formatDateTime(this.editingDeviceData.createdAt),
+            updatedAt: this.formatDateTime(this.editingDeviceData.updatedAt)
+          };
+          
+          // 如果有经纬度，自动获取地区信息
+          if (this.isValidCoordinates) {
+            this.loadLocationInfo();
+          }
         } else {
           // 新增模式，重置表单
           this.resetForm();
         }
       }
+    },
+    'formData.latitude'() {
+      // 经纬度变化，清除之前的地区信息
+      this.locationInfo = null;
+    },
+    'formData.longitude'() {
+      // 经纬度变化，清除之前的地区信息
+      this.locationInfo = null;
     }
   },
   methods: {
+    isImageUrl(url) {
+      return typeof url === 'string' && url.trim().toLowerCase().startsWith('http');
+    },
     resetForm() {
+      const now = this.formatDate(new Date());
       this.formData = {
         id: null,
-        name: '',
-        type: '',
-        location: '',
-        longitude: null,
-        latitude: null,
-        firmware: '',
-        status: 'online'
+        deviceName: '',
+        deviceCode: '',
+        deviceType: '',
+        status: 1,
+        latitude: '',
+        longitude: '',
+        deviceIntegration: 0,
+        adminId: 1,
+        createdAt: now,
+        updatedAt: now
       };
     },
     closeModal() {
       this.$emit('close');
     },
     submitForm() {
-      // 在这里可以添加表单校验逻辑
-      const deviceToSave = { ...this.formData };
-      if (!this.editingDeviceData) { // 如果是新增，可以生成一个临时ID或由后端生成
-        // deviceToSave.id = Date.now().toString(); // 仅为示例
+      // 表单验证
+      if (!this.formData.deviceName) {
+        ElMessage.warning('请输入设备名称');
+        return;
       }
+      if (!this.formData.deviceCode) {
+        ElMessage.warning('请输入设备图片URL或编码');
+        return;
+      }
+      if (!this.formData.deviceType) {
+        ElMessage.warning('请输入设备类型');
+        return;
+      }
+      
+      const deviceToSave = { ...this.formData };
       this.$emit('save', deviceToSave);
-      // closeModal(); // 保存后通常会关闭弹窗，父组件会处理
+    },
+    async loadLocationInfo() {
+      if (!this.isValidCoordinates) {
+        ElMessage.warning('请先输入有效的经纬度坐标');
+        return;
+      }
+      
+      this.isLoadingLocation = true;
+      
+      try {
+        const locationInfo = await getLocation(this.formData.longitude, this.formData.latitude);
+        this.locationInfo = locationInfo;
+        console.log('获取到地区信息:', locationInfo);
+      } catch (error) {
+        console.error('获取地区信息失败:', error);
+        ElMessage.error('无法获取地区信息');
+      } finally {
+        this.isLoadingLocation = false;
+      }
+    },
+    formatDateTime(dateTime) {
+      if (!dateTime) return null;
+      
+      if (typeof dateTime === 'string') {
+        // 检查是否是ISO格式
+        if (dateTime.includes('T') && dateTime.includes('Z')) {
+          // ISO格式，直接转换
+          const date = new Date(dateTime);
+          return this.formatDate(date);
+        } else {
+          // 尝试解析非ISO格式
+          const date = new Date(dateTime);
+          if (!isNaN(date.getTime())) {
+            return this.formatDate(date);
+          }
+        }
+      } else if (dateTime instanceof Date) {
+        return this.formatDate(dateTime);
+      }
+      
+      // 无法解析，返回null
+      return null;
+    },
+    formatDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    },
+    closeMapSelector() {
+      this.showMapSelector = false;
+    },
+    handleLocationSelected(location) {
+      console.log('选择的位置:', location);
+      this.formData.longitude = location.longitude;
+      this.formData.latitude = location.latitude;
+      
+      // 自动获取地区信息
+      this.loadLocationInfo();
+      
+      // 关闭地图选择器
+      this.closeMapSelector();
+      
+      ElMessage.success('位置已更新');
     }
   }
 };
 </script>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background-color: white;
-  padding: 25px 30px;
-  border-radius: 8px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-  width: 450px;
-  max-width: 90%;
-}
-
-.modal-content h3 {
-  margin-top: 0;
-  margin-bottom: 20px;
-  color: #333;
-  font-size: 1.5em;
-  text-align: center;
-}
-
-.form-group {
-  margin-bottom: 18px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 500;
-  color: #555;
-}
-
-.form-group input[type="text"],
-.form-group select {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-sizing: border-box;
-  font-size: 1em;
-}
-
-.form-group input[type="text"]:focus,
-.form-group select:focus {
-  border-color: #1890ff;
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
-}
-
-.form-actions {
-  margin-top: 25px;
+.dialog-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
 }
 
-.btn {
-  padding: 10px 18px;
+.image-preview {
+  margin-top: 10px;
+  padding: 5px;
+  border: 1px dashed #dcdfe6;
   border-radius: 4px;
-  cursor: pointer;
-  font-size: 1em;
-  font-weight: 500;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease;
-  border: none;
+  display: inline-block;
 }
 
-.btn-primary {
-  background-color: #1890ff;
-  color: white;
+.image-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 150px;
+  height: 90px;
+  background-color: #f5f7fa;
+  color: #909399;
+  font-size: 12px;
 }
 
-.btn-primary:hover {
-  background-color: #40a9ff;
+.image-error .el-icon {
+  font-size: 20px;
+  margin-bottom: 8px;
 }
 
-.btn-secondary {
-  background-color: #f0f2f5;
-  color: #555;
-  border: 1px solid #d9d9d9;
+.tip-text {
+  margin-top: 5px;
+  color: #909399;
+  font-size: 12px;
 }
 
-.btn-secondary:hover {
-  background-color: #e7e9ec;
+.location-container {
+  margin-top: 10px;
+  padding: 5px;
+  border: 1px dashed #dcdfe6;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.location-detail {
+  margin-top: 5px;
+  color: #909399;
+  font-size: 12px;
+}
+
+.loading-text {
+  margin-top: 5px;
+  color: #909399;
+  font-size: 12px;
+}
+
+.location-selector {
+  margin-top: 10px;
+  padding: 5px;
+  border: 1px dashed #dcdfe6;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.location-info {
+  margin-bottom: 10px;
 }
 </style>

@@ -3,6 +3,8 @@ import Dashboard from "../views/Dashboard.vue";
 import Admin from "../views/Admin.vue";
 import Device from "../views/Device.vue";
 import Connect from "../views/Connect.vue";
+import Protocol from "../views/Protocol.vue";
+import DeviceProtocol from "../views/DeviceProtocol.vue";
 import Alarm from "../views/Alarm.vue";
 import Statistics from "../views/Statistics.vue";
 import News from "../views/News.vue";
@@ -29,43 +31,55 @@ const routes = [
     path: "/dashboard",
     name: "Dashboard",
     component: Dashboard,
-    meta: { requiresAuth: true }, // 修改：大屏现在需要认证
+    meta: { requiresAuth: false }, // 修改：大屏现在需要认证
   },
   {
     path: "/admin",
     name: "Admin",
     component: Admin,
-    meta: { requiresAuth: true, permissionId: "admin" }, // 修改：个人中心需要认证
+    meta: { requiresAuth: false, permissionId: "admin" }, // 修改：个人中心需要认证
   },
   {
     path: "/device",
     name: "Device",
     component: Device,
-    meta: { requiresAuth: true, permissionId: "device" }, // 修改：设备管理需要认证
+    meta: { requiresAuth: false, permissionId: "device" }, // 修改：设备管理需要认证
   },
   {
     path: "/connect",
     name: "Connect",
     component: Connect,
-    meta: { requiresAuth: true, permissionId: "connect" }, // 修改：设备对接需要认证
+    meta: { requiresAuth: false, permissionId: "connect" }, // 修改：设备对接需要认证
+  },
+  {
+    path: "/protocol",
+    name: "Protocol",
+    component: Protocol,
+    meta: { requiresAuth: false, permissionId: "protocol" }, // 协议管理需要权限
+  },
+  {
+    path: "/device-protocol",
+    name: "DeviceProtocol",
+    component: DeviceProtocol,
+    meta: { requiresAuth: false, permissionId: "device-protocol" }, // 设备协议绑定需要权限
   },
   {
     path: "/alarm",
     name: "Alarm",
     component: Alarm,
-    meta: { requiresAuth: true, permissionId: "alarm" }, // 修改：告警管理需要认证
+    meta: { requiresAuth: false, permissionId: "alarm" }, // 修改：告警管理需要认证
   },
   {
     path: "/statistics",
     name: "Statistics",
     component: Statistics,
-    meta: { requiresAuth: true, permissionId: "statistics" }, // 统计分析需要权限
+    meta: { requiresAuth: false, permissionId: "statistics" }, // 统计分析需要权限
   },
   {
     path: "/news",
     name: "News",
     component: News,
-    meta: { requiresAuth: true, permissionId: "news" }, // 消息中心需要权限
+    meta: { requiresAuth: false, permissionId: "news" }, // 消息中心需要权限
   },
   // 您可以添加一个统一的无权限页面路由
   // {

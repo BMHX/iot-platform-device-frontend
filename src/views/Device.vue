@@ -1,100 +1,178 @@
 <template>
-  <div class="device-page device-page-styles">
-    <!-- Add device-page-styles class here -->
-    <div class="actions-header">
-      <input
-        type="text"
-        v-model="searchQuery"
-        placeholder="搜索设备名称或ID..."
-        class="search-input"
-      />
-      <button @click="openAddDeviceModal" class="btn btn-primary">
-        添加设备
-      </button>
-    </div>
+  <div class="page-container">
+    <el-card class="search-form">
+      <el-row :gutter="20">
+        <el-col :span="8">
+          <el-input
+            v-model="searchQuery"
+            placeholder="搜索设备名称或编码..."
+            prefix-icon="Search"
+            clearable
+            @clear="loadLocalDevices"
+            @keyup.enter="searchLocalDevices"
+          />
+        </el-col>
+        <el-col :span="8">
+          <div>
+            <span class="filter-label">状态：</span>
+            <el-radio-group v-model="currentStatusFilter" size="large" @change="filterLocalDevices">
+            <el-radio-button :label="null">全部</el-radio-button>
+            <el-radio-button :label="1">在线</el-radio-button>
+            <el-radio-button :label="0">离线</el-radio-button>
+          </el-radio-group>
+          </div>
+        </el-col>
+        <el-col :span="8" class="text-right">
+          <el-dropdown @command="handleCommand" style="margin-right: 10px;">
+            <el-button type="info">
+              设置 <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="toggleLocationAPI">
+                  {{ useOnlineAPI ? '使用离线地图API' : '使用在线地图API' }}
+                </el-dropdown-item>
+                <el-dropdown-item command="toggleAutoLoadLocation">
+                  {{ autoLoadLocation ? '禁用自动加载位置' : '启用自动加载位置' }}
+                </el-dropdown-item>
+                <el-dropdown-item command="clearLocationCache">清除位置缓存</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+          <el-button type="primary" @click="openAddDeviceModal">
+            <el-icon><Plus /></el-icon> 添加设备
+          </el-button>
+        </el-col>
+      </el-row>
+    </el-card>
 
-    <div class="status-tabs">
-      <button
-        class="tab-btn"
-        :class="{ active: currentStatusFilter === 'all' }"
-        @click="currentStatusFilter = 'all'"
-      >
-        全部
-      </button>
-      <button
-        class="tab-btn"
-        :class="{ active: currentStatusFilter === 'online' }"
-        @click="currentStatusFilter = 'online'"
-      >
-        在线
-      </button>
-      <button
-        class="tab-btn"
-        :class="{ active: currentStatusFilter === 'offline' }"
-        @click="currentStatusFilter = 'offline'"
-      >
-        离线
-      </button>
-    </div>
+    <el-card class="data-table">
+      <div class="table-header">
+        <div class="table-info">
+          <el-tag type="info" v-if="filteredDeviceList.length > 0">
+            共 {{ filteredDeviceList.length }} 条数据，当前显示 {{ getPaginationInfo() }}
+          </el-tag>
+          <el-tag type="info" v-else>暂无数据</el-tag>
+        </div>
+        <div class="table-actions">
+          <el-radio-group v-model="pageSize" size="small" @change="handleSizeChange">
+            <el-radio-button :label="5">5条/页</el-radio-button>
+            <el-radio-button :label="10">10条/页</el-radio-button>
+            <el-radio-button :label="15">15条/页</el-radio-button>
+          </el-radio-group>
+        </div>
+      </div>
 
-    <div v-if="isLoading" class="loading-spinner">正在加载...</div>
-
-    <table v-if="!isLoading && filteredDevices.length > 0">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>设备名称</th>
-          <th>类型</th>
-          <th>状态</th>
-          <th>位置描述</th>
-          <th>城市</th>
-          <th>最后上线时间</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- 修改这里：将 processedDevices 修改为 filteredDevices -->
-        <tr v-for="device in filteredDevices" :key="device.id">
-          <td>{{ device.id }}</td>
-          <td>{{ device.name }}</td>
-          <td>{{ device.type }}</td>
-          <td>
-            <span
-              :class="[
-                'status-badge',
-                device.status === 'online' ? 'status-online' : 'status-offline',
-              ]"
-            >
-              {{ device.status === "online" ? "在线" : "离线" }}
+      <el-table
+        v-loading="isLoading"
+        :data="displayDeviceList"
+        style="width: 100%"
+        border
+        stripe
+      >
+        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="deviceName" label="设备名称" width="150" />
+        <el-table-column label="设备图片" width="150">
+          <template #default="scope">
+            <el-image 
+              v-if="scope.row.deviceCode && scope.row.deviceCode.startsWith('http')"
+              :src="scope.row.deviceCode" 
+              style="width: 100px; height: 60px" 
+              fit="cover"
+              :preview-src-list="[scope.row.deviceCode]">
+              <template #error>
+                <div class="image-error">
+                  <el-icon><Picture /></el-icon>
+                  <span>加载失败</span>
+                </div>
+              </template>
+            </el-image>
+            <span v-else>{{ scope.row.deviceCode }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="deviceType" label="类型" width="120" />
+        <el-table-column label="状态" width="100">
+          <template #default="scope">
+            <el-tag :type="scope.row.status === 1 ? 'success' : 'info'">
+              {{ scope.row.status === 1 ? "在线" : "离线" }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="集成状态" width="120">
+          <template #default="scope">
+            <el-tag :type="getIntegrationStatusType(scope.row.deviceIntegration)">
+              {{ getIntegrationStatusText(scope.row.deviceIntegration) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="位置" width="180">
+          <template #default="scope">
+            <span v-if="scope.row.locationInfo && scope.row.locationInfo.formatted_address">
+              {{ scope.row.locationInfo.formatted_address }}
             </span>
-          </td>
-          <td>{{ device.location || "-" }}</td>
-          <td>{{ device.cityName || "解析中..." }}</td>
-          <td>
-            {{
-              device.lastSeen ? new Date(device.lastSeen).toLocaleString() : "-"
-            }}
-          </td>
-          <td>
-            <button
-              @click="openEditDeviceModal(device)"
-              class="btn btn-sm btn-warning"
+            <span v-else-if="scope.row.isLoadingLocation">
+              <el-icon class="is-loading"><Loading /></el-icon> 加载中...
+            </span>
+            <span v-else-if="scope.row.latitude && scope.row.longitude">
+              <el-tooltip :content="`经度: ${scope.row.longitude}, 纬度: ${scope.row.latitude}`">
+                <el-button link type="primary" @click="loadLocationInfo(scope.row)">
+                  点击查看地区
+                </el-button>
+              </el-tooltip>
+            </span>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="创建时间" width="180">
+          <template #default="scope">
+            {{ formatDateTime(scope.row.createdAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="更新时间" width="180">
+          <template #default="scope">
+            {{ formatDateTime(scope.row.updatedAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="180">
+          <template #default="scope">
+            <el-button
+              size="small"
+              type="primary"
+              @click="openEditDeviceModal(scope.row)"
             >
               编辑
-            </button>
-            <button
-              @click="deleteDevice(device.id)"
-              class="btn btn-sm btn-danger"
+            </el-button>
+            <el-popconfirm
+              title="确定要删除此设备吗？"
+              @confirm="handleDeleteDevice(scope.row.id)"
             >
-              删除
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <div v-if="!isLoading && filteredDevices.length === 0" class="no-data">
-      暂无设备数据。
-    </div>
+              <template #reference>
+                <el-button size="small" type="danger">删除</el-button>
+              </template>
+            </el-popconfirm>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <div v-if="!isLoading && displayDeviceList.length === 0" class="no-data">
+        <el-empty description="暂无设备数据" />
+      </div>
+      
+      <!-- 分页控件 -->
+      <div class="pagination-container" v-if="filteredDeviceList.length > 0">
+      <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[5, 10, 15]"
+          :pager-count="5"
+        layout="total, sizes, prev, pager, next, jumper"
+          :total="filteredDeviceList.length"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+          background
+      />
+      </div>
+    </el-card>
 
     <!-- 设备表单弹窗 -->
     <DeviceFormModal
@@ -107,294 +185,643 @@
 </template>
 
 <script>
-// import DeviceFormModal from '@/components/DeviceFormModal.vue'; // 稍后取消注释
 import DeviceFormModal from "@/components/DeviceFormModal.vue";
+import { listDevicesByAdminId, deleteDevice, addDevice, updateDevice } from "@/api/device";
+import { ElMessage } from "element-plus";
+import { Picture, Plus, ArrowDown, Loading } from '@element-plus/icons-vue';
+import { getLocation } from "@/api/location";
+import { addDeviceProtocol } from "@/api/deviceProtocol";
+import { getProtocolList } from "@/api/protocol";
 
 export default {
-  components: { DeviceFormModal },
+  components: { 
+    DeviceFormModal,
+    Picture,
+    Plus,
+    ArrowDown,
+    Loading
+  },
   data() {
     return {
       isLoading: false,
       searchQuery: "",
-      currentStatusFilter: "all", // 'all', 'online', 'offline'
-      devices: [], // 将从后端获取或localStorage
+      currentStatusFilter: null,
+      deviceList: [], // 所有设备数据
+      filteredDeviceList: [], // 过滤后的设备数据
+      displayDeviceList: [], // 当前页显示的设备数据
       showDeviceFormModal: false,
       editingDevice: null,
-      processedDevices: [], // 用于存储包含解析后城市名称的设备列表
+      adminId: 1, // 固定使用管理员ID为1
+      useOnlineAPI: localStorage.getItem('useOnlineAPI') !== 'false',
+      autoLoadLocation: localStorage.getItem('autoLoadLocation') !== 'false',
+      currentPage: 1,
+      pageSize: parseInt(localStorage.getItem('pageSize') || '10')
     };
   },
-  computed: {
-    filteredDevices() {
-      // 这个计算属性现在作用于 processedDevices
-      let devices = this.processedDevices;
-      if (this.currentStatusFilter !== "all") {
-        devices = devices.filter((d) => d.status === this.currentStatusFilter);
-      }
-      if (this.searchQuery) {
-        const query = this.searchQuery.toLowerCase();
-        devices = devices.filter(
-          (d) =>
-            d.name.toLowerCase().includes(query) ||
-            d.id.toLowerCase().includes(query)
-        );
-      }
-      return devices;
-    },
-  },
-  watch: {
-    // 新增 watch 侦听器
-    devices: {
-      handler(newDevices) {
-        if (newDevices && newDevices.length > 0) {
-          this.updateProcessedDevices(newDevices);
-        } else {
-          this.processedDevices = []; // 如果 devices 为空，则清空 processedDevices
-        }
-      },
-      deep: true, // 深度侦听，以便数组内部对象变化也能触发
-      // immediate: true // 如果需要在组件创建时立即执行一次，可以取消注释，但 fetchDevices 也会调用
-    },
-  },
   methods: {
+    formatDateTime(dateTime) {
+      if (!dateTime) return '-';
+      const date = new Date(dateTime);
+      return date.toLocaleString();
+    },
+    
     async fetchDevices() {
       this.isLoading = true;
-      console.log("尝试从localStorage获取设备列表或调用后端API");
-      // 移除不必要的 await new Promise，让加载更快
-      // await new Promise((resolve) => setTimeout(resolve, 500));
-
-      const localDevices = localStorage.getItem("devices");
-      let loadedDevices = [];
-      if (localDevices) {
-        try {
-          loadedDevices = JSON.parse(localDevices);
-          console.log("从localStorage加载设备列表:", loadedDevices);
-        } catch (error) {
-          console.error("解析localStorage中的设备数据失败:", error);
-          // 解析失败时，也尝试加载回退数据
-          loadedDevices = this.loadFallbackDevicesData();
+      
+      try {
+        console.log('尝试获取设备列表, adminId:', this.adminId);
+        
+        // 判断是否需要使用模拟数据（如果后端服务不可用）
+        const useMockData = localStorage.getItem('useMockData') === 'true';
+        
+        if (useMockData) {
+          console.log('使用模拟数据');
+          const mockDevices = [
+            {
+              id: 1,
+              deviceName: '测试设备1',
+              deviceCode: 'TEST001',
+              deviceType: '传感器',
+              status: 1,
+              latitude: '39.904211',
+              longitude: '116.407395',
+              deviceIntegration: 0,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              adminId: 1
+            },
+            {
+              id: 2,
+              deviceName: '测试设备2',
+              deviceCode: 'TEST002',
+              deviceType: '摄像头',
+              status: 0,
+              latitude: '31.230416',
+              longitude: '121.473701',
+              deviceIntegration: 1,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              adminId: 1
+            }
+          ];
+          
+          this.deviceList = mockDevices;
+          
+          // 加载地理位置信息
+          this.preloadLocationInfo(this.deviceList);
+          
+          // 初始化分页
+          this.currentPage = 1;
+          this.applyFilters();
+          this.updateDisplayList();
+          
+          ElMessage.success('成功加载模拟数据');
+          return;
         }
-      } else {
-        loadedDevices = this.loadFallbackDevicesData();
+        
+        // 真实请求
+        const result = await listDevicesByAdminId(this.adminId);
+        console.log('获取到的设备列表:', result);
+        
+        if (Array.isArray(result)) {
+          // 直接是数组结构
+          this.deviceList = result;
+        } else if (result && result.data && Array.isArray(result.data)) {
+          // 包含在data字段中
+          this.deviceList = result.data;
+        } else {
+          // 其他格式，尝试处理
+          this.deviceList = [];
+          ElMessage.warning('设备数据格式不符合预期');
+        }
+        
+        // 加载地理位置信息
+        this.preloadLocationInfo(this.deviceList);
+        
+        // 初始化分页
+        this.currentPage = 1;
+        this.applyFilters();
+        this.updateDisplayList();
+        
+        ElMessage.success('成功获取设备列表');
+      } catch (error) {
+        console.error('获取设备列表失败:', error);
+        
+        // 尝试开启模拟数据模式
+        if (confirm('获取设备列表失败，是否切换到模拟数据模式？')) {
+          localStorage.setItem('useMockData', 'true');
+          this.fetchDevices(); // 重新获取（使用模拟数据）
+          return;
+            }
+        
+        this.deviceList = [];
+        this.filteredDeviceList = [];
+        this.displayDeviceList = [];
+        
+        let errorMsg = '获取设备列表失败';
+        if (error.response) {
+          errorMsg += `: ${error.response.status}`;
+          console.log('完整错误响应:', error.response);
+          
+          if (error.response.data) {
+            console.log('错误响应内容:', error.response.data);
+          }
+        }
+        
+        ElMessage.error(errorMsg);
+      } finally {
+        this.isLoading = false;
       }
-      this.devices = loadedDevices;
-      // 显式调用 updateProcessedDevices，而不是仅仅依赖 watch
-      // 因为 watch 可能在 this.devices 赋值后，isLoading 变为 false 之前还未完成处理
-      // 但是，由于我们添加了 watch，这里可以考虑是否移除，或者让 watch 的 immediate: true 处理首次加载
-      // 为了确保数据能尽快处理，保留这里的调用，watch 主要处理后续变化
-      if (this.devices.length > 0) {
-        await this.updateProcessedDevices(this.devices); // 等待处理完成
-      } else {
-        this.processedDevices = []; // 如果没有设备，直接清空
-      }
-
-      this.isLoading = false;
     },
-    loadFallbackDevicesData() {
-      // 修改为返回数据，而不是直接赋值
-      console.log("加载默认模拟设备数据");
-      return [
-        {
-          id: "DEV001",
-          name: "智能温度计",
-          type: "传感器",
-          status: "online",
-          lastSeen: "2024-05-22T10:00:00Z",
-          location: "仓库A",
-          longitude: 116.407395, // 北京市经度
-          latitude: 39.904211, // 北京市纬度
-          firmware: "v1.2.3",
-        },
-        {
-          id: "DEV002",
-          name: "高清摄像头",
-          type: "监控设备",
-          status: "offline",
-          lastSeen: "2024-05-21T15:30:00Z",
-          location: "大门入口",
-          longitude: 121.473701, // 上海市经度
-          latitude: 31.230416, // 上海市纬度
-          firmware: "v2.0.1",
-        },
-        {
-          id: "DEV003",
-          name: "环境监测仪",
-          type: "传感器",
-          status: "online",
-          lastSeen: "2024-05-22T11:20:00Z",
-          location: "实验室",
-          longitude: 113.943634, // 例如，深圳的经度
-          latitude: 22.548979, // 例如，深圳的纬度
-          firmware: "v1.5.0",
-        },
-        {
-          id: "DEV004",
-          name: "智能门锁",
-          type: "安防设备",
-          status: "online",
-          lastSeen: "2024-05-22T12:00:00Z",
-          location: "办公室",
-          longitude: 113.264385, // 广州市经度
-          latitude: 23.12911, // 广州市纬度
-          firmware: "v3.1.0",
-        },
-      ];
+    
+    // 本地加载所有设备（不发送请求）
+    loadLocalDevices() {
+      console.log("执行loadLocalDevices");
+      this.currentPage = 1; // 重置到第一页
+      this.applyFilters();
+      this.updateDisplayList();
     },
-    loadFallbackDevices() {
-      // 保留原方法名，但内部调用新的返回数据的方法
-      this.devices = this.loadFallbackDevicesData();
-    },
-    // 模拟逆地理编码API调用
-    async reverseGeocode(latitude, longitude) {
-      if (
-        latitude === null ||
-        longitude === null ||
-        latitude === undefined ||
-        longitude === undefined
-      ) {
-        return "无坐标";
-      }
-      console.log(`模拟逆地理编码: ${latitude}, ${longitude}`);
-      // 模拟网络延迟
-      await new Promise((resolve) =>
-        setTimeout(resolve, 300 + Math.random() * 500)
-      );
-
-      // 简化的模拟逻辑：根据经纬度范围大致判断城市
-      // 实际应用中，这里会是 fetch 调用第三方API
-      if (
-        latitude > 39.4 &&
-        latitude < 41.1 &&
-        longitude > 115.4 &&
-        longitude < 117.5
-      ) {
-        return "北京市 (模拟)";
-      } else if (
-        latitude > 30.4 &&
-        latitude < 31.9 &&
-        longitude > 120.8 &&
-        longitude < 122.2
-      ) {
-        return "上海市 (模拟)";
-      } else if (
-        latitude > 22.5 &&
-        latitude < 23.9 &&
-        longitude > 112.7 &&
-        longitude < 114.1
-      ) {
-        return "广州市 (模拟)";
-      } else if (
-        latitude > 22.1 &&
-        latitude < 22.6 &&
-        longitude > 113.3 &&
-        longitude < 114.7
-      ) {
-        return "深圳市 (模拟)";
-      }
-      return "未知区域 (模拟)";
-    },
-
-    async updateProcessedDevices(devicesToProcess) {
-      // 参数名修改以避免与 this.devices 混淆
-      // 只有在真正开始处理时才设置 isLoading 为 true
-      // 如果 devicesToProcess 为空或未定义，则不进行处理
-      if (!devicesToProcess || devicesToProcess.length === 0) {
-        this.processedDevices = [];
-        this.isLoading = false; // 确保在没有数据处理时也关闭加载状态
+    
+    // 本地搜索设备
+    searchLocalDevices() {
+      if (!this.searchQuery.trim()) {
+        this.loadLocalDevices();
         return;
       }
-      this.isLoading = true;
-      const newProcessedDevices = [];
-      for (const device of devicesToProcess) {
-        const cityName = await this.reverseGeocode(
-          device.latitude,
-          device.longitude
-        );
-        newProcessedDevices.push({ ...device, cityName });
+      
+      this.currentPage = 1; // 重置到第一页
+      this.applyFilters();
+      this.updateDisplayList();
+    },
+    
+    // 应用过滤条件
+    applyFilters() {
+      // 第一步：应用搜索过滤
+      let filtered = [...this.deviceList];
+      
+      // 搜索过滤
+      if (this.searchQuery.trim()) {
+        const searchText = this.searchQuery.toLowerCase().trim();
+        filtered = filtered.filter(device => {
+          return (
+            (device.deviceName && device.deviceName.toLowerCase().includes(searchText)) ||
+            (device.deviceCode && device.deviceCode.toLowerCase().includes(searchText))
+          );
+        });
       }
-      this.processedDevices = newProcessedDevices;
-      this.isLoading = false;
+      
+      // 状态过滤
+      if (this.currentStatusFilter !== null) {
+        filtered = filtered.filter(device => device.status === this.currentStatusFilter);
+      }
+      
+      this.filteredDeviceList = filtered;
+    },
+    
+    // 更新显示列表（分页）
+    updateDisplayList() {
+      const startIndex = (this.currentPage - 1) * this.pageSize;
+      const endIndex = startIndex + this.pageSize;
+      
+      console.log(`分页信息：当前页=${this.currentPage}, 每页=${this.pageSize}, 总数=${this.filteredDeviceList.length}`);
+      console.log(`显示范围：${startIndex} 到 ${endIndex}`);
+      
+      this.displayDeviceList = this.filteredDeviceList.slice(startIndex, endIndex);
+      
+      console.log(`当前页数据数量: ${this.displayDeviceList.length}`);
+    },
+    
+    // 本地过滤设备状态
+    filterLocalDevices(resetPage = true) {
+      if (resetPage) {
+        this.currentPage = 1;
+      }
+      
+      this.applyFilters();
+      this.updateDisplayList();
     },
 
     openAddDeviceModal() {
       this.editingDevice = null;
       this.showDeviceFormModal = true;
-      console.log("打开新增设备弹窗");
-      // 实际操作： this.showDeviceFormModal = true;
     },
+    
     openEditDeviceModal(device) {
-      this.editingDevice = { ...device }; // 传递副本以避免直接修改原数据
+      this.editingDevice = { ...device };
       this.showDeviceFormModal = true;
-      console.log("打开编辑设备弹窗:", device);
-      // 实际操作： this.showDeviceFormModal = true;
     },
+    
     async handleSaveDevice(deviceData) {
       this.isLoading = true;
-      console.log("调用后端API: 保存设备", deviceData);
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      let updatedDevices = [...this.devices]; // 创建副本进行操作
-      if (deviceData.id) {
-        const index = updatedDevices.findIndex((d) => d.id === deviceData.id);
-        if (index !== -1) {
-          updatedDevices.splice(index, 1, { ...deviceData });
-        }
-      } else {
-        const newDeviceWithId = {
-          ...deviceData,
-          id: `DEV${Date.now().toString().slice(-4)}${Math.random()
-            .toString(36)
-            .substr(2, 2)
-            .toUpperCase()}`,
-          lastSeen: new Date().toISOString(),
+      try {
+        // 准备提交到后端的数据
+        const submitData = {
+          deviceName: deviceData.deviceName,
+          deviceCode: deviceData.deviceCode,
+          deviceType: deviceData.deviceType,
+          status: deviceData.status,
+          adminId: this.adminId,
+          latitude: deviceData.latitude || '',
+          longitude: deviceData.longitude || '',
+          deviceIntegration: deviceData.deviceIntegration,
+          createdAt: deviceData.createdAt || new Date().toISOString(),
+          updatedAt: deviceData.updatedAt || new Date().toISOString()
         };
-        updatedDevices.push(newDeviceWithId);
-      }
-
-      this.devices = updatedDevices; // 触发 watch 更新 processedDevices
-
-      try {
-        localStorage.setItem("devices", JSON.stringify(this.devices));
-        console.log("设备列表已更新到localStorage", this.devices);
+        
+        let deviceId = deviceData.id;
+        let isNewDevice = false;
+        
+        if (deviceId) {
+          // 更新设备
+          submitData.id = deviceId;
+          await updateDevice(submitData);
+          ElMessage.success('设备更新成功');
+        } else {
+          // 新增设备
+          isNewDevice = true;
+          const result = await addDevice(submitData);
+          
+          // 获取新设备的ID
+          if (result && result.data) {
+            deviceId = result.data;
+          } else {
+            // 尝试通过设备名称和编码查询新添加的设备
+            await this.fetchDevices();
+            const newDevice = this.deviceList.find(
+              d => d.deviceName === submitData.deviceName && 
+                  d.deviceCode === submitData.deviceCode
+            );
+            if (newDevice) {
+              deviceId = newDevice.id;
+            }
+          }
+          
+          ElMessage.success('设备添加成功');
+        }
+        
+        // 如果是新设备且获取到了设备ID，尝试创建设备协议绑定
+        if (isNewDevice && deviceId) {
+          try {
+            // 获取可用的协议列表
+            const protocolResult = await getProtocolList({});
+            const protocols = Array.isArray(protocolResult) ? protocolResult : 
+                            (protocolResult && protocolResult.data ? protocolResult.data : []);
+            
+            // 如果有可用协议，选择第一个进行绑定
+            if (protocols.length > 0) {
+              const defaultProtocol = protocols.find(p => p.status === 1) || protocols[0];
+              
+              await addDeviceProtocol({
+                deviceId: deviceId,
+                protocolId: defaultProtocol.id
+              });
+              
+              console.log(`已为设备(ID=${deviceId})创建协议绑定，协议ID=${defaultProtocol.id}`);
+            } else {
+              console.log('没有可用的协议，跳过创建设备协议绑定');
+            }
+          } catch (bindError) {
+            console.error('创建设备协议绑定失败:', bindError);
+            // 不影响主流程，只记录错误
+          }
+        }
+        
+        // 刷新设备列表
+        this.fetchDevices();
       } catch (error) {
-        console.error("保存设备列表到localStorage失败:", error);
+        console.error('保存设备失败:', error);
+        ElMessage.error('保存设备失败: ' + (error.message || '未知错误'));
+      } finally {
+        this.isLoading = false;
+        this.closeDeviceFormModal();
       }
-
-      // isLoading 会在 updateProcessedDevices 中处理，或者在这里显式设置为 false
-      // this.isLoading = false; // 如果 watch 更新很快，可能不需要在这里设置
-      this.closeDeviceFormModal();
     },
-
-    async deleteDevice(deviceId) {
-      if (!confirm("确定要删除此设备吗？")) return;
-      // this.isLoading = true; // isLoading 的管理移到 updateProcessedDevices 或由 watch 触发
-      console.log(`调用后端API: 删除设备 ${deviceId}`);
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      this.devices = this.devices.filter((d) => d.id !== deviceId); // 触发 watch
-
+    
+    async handleDeleteDevice(id) {
+      this.isLoading = true;
       try {
-        localStorage.setItem("devices", JSON.stringify(this.devices));
-        console.log(
-          `设备 ${deviceId} 已从localStorage删除，剩余设备:`,
-          this.devices
-        );
+        await deleteDevice(id);
+        ElMessage.success('设备删除成功');
+        // 刷新设备列表
+        this.fetchDevices();
       } catch (error) {
-        console.error("保存设备列表到localStorage失败:", error);
+        console.error('删除设备失败:', error);
+        ElMessage.error('删除设备失败: ' + (error.message || '未知错误'));
+      } finally {
+        this.isLoading = false;
       }
-      // this.isLoading = false; // isLoading 的管理移到 updateProcessedDevices 或由 watch 触发
     },
-    viewDeviceDetails(deviceId) {
-      console.log("查看设备详情:", deviceId);
-      // 实际操作：可能路由到设备详情页 this.$router.push(`/devices/${deviceId}`);
-      // 或者打开一个详情模态框
+    
+    closeDeviceFormModal() {
+      this.showDeviceFormModal = false;
+      this.editingDevice = null;
     },
+
+    async loadLocationInfo(device) {
+      if (device.isLoadingLocation) return;
+      
+      // 设置加载状态
+      device.isLoadingLocation = true;
+      
+      try {
+        console.log(`手动加载设备${device.id}的位置信息:`, device.longitude, device.latitude);
+        const locationInfo = await getLocation(device.longitude, device.latitude);
+        console.log(`设备${device.id}的位置信息加载完成:`, locationInfo);
+        
+        // 更新设备对象的位置信息
+        if (locationInfo && locationInfo.formatted_address) {
+          device.locationInfo = locationInfo;
+          ElMessage.success(`已加载位置信息: ${locationInfo.formatted_address}`);
+        } else {
+          console.warn(`设备${device.id}的位置信息无效:`, locationInfo);
+          device.locationInfo = {
+            province: '未知省份',
+            city: '未知城市',
+            district: '未知区县',
+            formatted_address: '位置解析失败'
+          };
+          ElMessage.warning('无法获取有效的位置信息');
+        }
+      } catch (error) {
+        console.error('加载位置信息失败:', error);
+        device.locationInfo = {
+          province: '未知省份',
+          city: '未知城市',
+          district: '未知区县',
+          formatted_address: '位置解析失败'
+        };
+        ElMessage.error('无法获取位置信息: ' + (error.message || '未知错误'));
+      } finally {
+        device.isLoadingLocation = false;
+      }
+    },
+
+    // 自动加载地理位置信息
+    preloadLocationInfo(devices) {
+      // 只尝试加载有经纬度的设备的地理位置信息
+      const devicesWithCoordinates = devices.filter(device => 
+        device.latitude && device.longitude && 
+        !device.isLoadingLocation && !device.locationInfo
+      );
+      
+      if (devicesWithCoordinates.length === 0) return;
+      
+      // 是否自动加载位置信息（从本地存储获取设置）
+      const autoLoadLocation = localStorage.getItem('autoLoadLocation') !== 'false';
+      
+      if (autoLoadLocation) {
+        console.log(`开始加载${devicesWithCoordinates.length}个设备的位置信息`);
+        
+        // 使用Promise.all并行加载所有设备的位置信息
+        Promise.all(
+          devicesWithCoordinates.map(async device => {
+            try {
+              device.isLoadingLocation = true;
+              console.log(`加载设备${device.id}的位置信息:`, device.longitude, device.latitude);
+              
+              const locationInfo = await getLocation(device.longitude, device.latitude);
+              console.log(`设备${device.id}的位置信息加载完成:`, locationInfo);
+              
+              if (locationInfo && locationInfo.formatted_address) {
+                device.locationInfo = locationInfo;
+              } else {
+                console.warn(`设备${device.id}的位置信息无效:`, locationInfo);
+                device.locationInfo = {
+                  province: '未知省份',
+                  city: '未知城市',
+                  district: '未知区县',
+                  formatted_address: '位置解析失败'
+                };
+              }
+            } catch (error) {
+              console.error(`设备${device.id}的位置信息加载失败:`, error);
+              device.locationInfo = {
+                province: '未知省份',
+                city: '未知城市',
+                district: '未知区县',
+                formatted_address: '位置解析失败'
+              };
+            } finally {
+              device.isLoadingLocation = false;
+            }
+          })
+        ).then(() => {
+          console.log('所有设备的位置信息加载完成');
+        }).catch(error => {
+          console.error('加载位置信息时发生错误:', error);
+        });
+      }
+    },
+
+    handleCommand(command) {
+      if (command === 'toggleLocationAPI') {
+        this.useOnlineAPI = !this.useOnlineAPI;
+        localStorage.setItem('useOnlineAPI', this.useOnlineAPI.toString());
+        ElMessage.success(`已${this.useOnlineAPI ? '启用' : '禁用'}在线地图API`);
+        
+        // 刷新位置信息
+        this.refreshLocationInfo();
+      } else if (command === 'toggleAutoLoadLocation') {
+        this.autoLoadLocation = !this.autoLoadLocation;
+        localStorage.setItem('autoLoadLocation', this.autoLoadLocation.toString());
+        ElMessage.success(`已${this.autoLoadLocation ? '启用' : '禁用'}自动加载位置信息`);
+        
+        // 如果启用了自动加载，则立即加载位置信息
+        if (this.autoLoadLocation) {
+          this.refreshLocationInfo();
+        }
+      } else if (command === 'clearLocationCache') {
+        // 清除所有设备的位置信息
+        this.deviceList.forEach(device => {
+          device.locationInfo = null;
+          device.isLoadingLocation = false;
+        });
+        this.filteredDeviceList.forEach(device => {
+          device.locationInfo = null;
+          device.isLoadingLocation = false;
+        });
+        this.displayDeviceList.forEach(device => {
+          device.locationInfo = null;
+          device.isLoadingLocation = false;
+        });
+        ElMessage.success('已清除位置信息缓存');
+      }
+    },
+
+    // 刷新所有设备的位置信息
+    refreshLocationInfo() {
+      this.deviceList.forEach(device => {
+        device.locationInfo = null;
+        device.isLoadingLocation = false;
+      });
+      
+      if (this.autoLoadLocation) {
+        this.preloadLocationInfo(this.deviceList);
+      }
+    },
+
+    handleSizeChange(newSize) {
+      console.log(`改变每页显示数: ${newSize}`);
+      this.pageSize = newSize;
+      localStorage.setItem('pageSize', newSize.toString());
+      this.currentPage = 1; // 重置到第一页
+      this.updateDisplayList();
+    },
+
+    handleCurrentChange(newPage) {
+      console.log(`切换到页码: ${newPage}`);
+      this.currentPage = newPage;
+      this.updateDisplayList();
+    },
+
+    getPaginationInfo() {
+      const startIndex = (this.currentPage - 1) * this.pageSize + 1;
+      const endIndex = Math.min(this.currentPage * this.pageSize, this.filteredDeviceList.length);
+      return `第 ${startIndex} - ${endIndex} 条，共 ${this.filteredDeviceList.length} 条`;
+    },
+
+    getIntegrationStatusType(deviceIntegration) {
+      if (deviceIntegration === 1) return 'primary';
+      if (deviceIntegration === 0) return 'info';
+      if (deviceIntegration === 3) return 'danger';
+      return 'info';
+    },
+
+    getIntegrationStatusText(deviceIntegration) {
+      if (deviceIntegration === 1) return '已集成';
+      if (deviceIntegration === 0) return '未集成';
+      if (deviceIntegration === 3) return '已拒绝';
+      return '未知状态';
+    }
   },
   mounted() {
+    // 从本地存储恢复分页设置
+    const savedPageSize = localStorage.getItem('pageSize');
+    if (savedPageSize) {
+      this.pageSize = parseInt(savedPageSize);
+    }
+    
+    console.log("组件挂载，初始页面大小:", this.pageSize);
+    
+    // 加载设备列表
     this.fetchDevices();
   },
+  computed: {
+    totalPages() {
+      return Math.ceil(this.filteredDeviceList.length / this.pageSize) || 1;
+    }
+  },
+  watch: {
+    // 监听过滤器变化，自动更新分页
+    currentStatusFilter() {
+      this.currentPage = 1; // 重置到第一页
+      this.filterLocalDevices(false);
+    },
+    
+    // 监听页面大小变化，自动更新显示
+    pageSize() {
+      this.updateDisplayList();
+    },
+    
+    // 监听当前页变化，确保不超出范围
+    currentPage(newPage) {
+      console.log(`当前页变为: ${newPage}, 总页数: ${this.totalPages}`);
+      // 确保当前页不超出总页数
+      if (newPage > this.totalPages) {
+        console.log(`页码越界，重置为: ${this.totalPages}`);
+        this.$nextTick(() => {
+          this.currentPage = this.totalPages;
+        });
+      }
+    },
+    
+    // 监听筛选后的数据列表变化
+    filteredDeviceList: {
+      handler(newList) {
+        console.log(`筛选后数据变化，数量: ${newList.length}`);
+        // 当数据变化导致总页数减少，且当前页超出新的总页数范围时
+        if (this.currentPage > this.totalPages) {
+          console.log(`数据变化导致页码越界，重置为: ${this.totalPages}`);
+          this.currentPage = this.totalPages;
+        }
+        this.updateDisplayList();
+      },
+      deep: true
+    }
+  }
 };
 </script>
 
-<style lang="scss">
-@use "@/assets/navHeaderStyles.scss"; // Or @import, if @use is not configured
+<style lang="scss" scoped>
+.text-right {
+  text-align: right;
+}
+
+.mb-20 {
+  margin-bottom: 20px;
+}
+
+.search-form {
+  margin-bottom: 20px;
+}
+
+.no-data {
+  padding: 40px 0;
+  text-align: center;
+}
+
+.data-table {
+  margin-bottom: 20px;
+}
+
+.image-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100px;
+  height: 60px;
+  background-color: #f5f7fa;
+  color: #909399;
+  font-size: 12px;
+  
+  .el-icon {
+    font-size: 20px;
+    margin-bottom: 8px;
+  }
+}
+
+.pagination-container {
+  margin-top: 20px;
+  padding: 10px 0;
+  text-align: right;
+  background-color: #fff;
+  border-top: 1px solid #ebeef5;
+}
+
+.el-pagination {
+  padding: 0;
+  margin: 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.table-info {
+  margin-right: 20px;
+}
+
+.table-actions {
+  margin-right: 20px;
+}
+
+.filter-label {
+  margin-right: 10px;
+}
 </style>
