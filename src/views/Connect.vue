@@ -20,9 +20,9 @@
             <span class="filter-label">状态：</span>
             <el-radio-group v-model="selectedStatusFilter" size="large" @change="filterRequests">
               <el-radio-button value="all">全部请求</el-radio-button>
-              <el-radio-button value="pending">待处理</el-radio-button>
-              <el-radio-button value="approved">已同意</el-radio-button>
-              <el-radio-button value="rejected">已拒绝</el-radio-button>
+              <el-radio-button value="0">未集成</el-radio-button>
+              <el-radio-button value="1">已集成</el-radio-button>
+              <el-radio-button value="3">已拒绝</el-radio-button>
             </el-radio-group>
           </div>
         </el-col>
@@ -30,52 +30,55 @@
     </el-card>
 
     <el-card v-loading="isLoading">
-      <div v-if="filteredRequests.length === 0" class="no-requests">
-        <el-empty description="暂无对接请求" />
+      <div v-if="filteredDevices.length === 0" class="no-requests">
+        <el-empty description="暂无设备" />
       </div>
 
       <div class="requests-grid">
         <el-card
-          v-for="request in filteredRequests"
-          :key="request.id"
+          v-for="device in filteredDevices"
+          :key="device.id"
           class="request-card"
-          :class="getCardStatusClass(request.status)"
+          :class="getCardStatusClass(device.deviceIntegration)"
           shadow="hover"
         >
           <div class="card-header">
-            <div class="protocol-icon">[{{ request.protocol }}]</div>
-            <h3 class="device-name">{{ request.deviceName }}</h3>
+            <div class="protocol-icon">[{{ device.deviceType || '未知' }}]</div>
+            <h3 class="device-name">{{ device.deviceName }}</h3>
             <el-tag
               class="request-status-tag"
-              :type="getStatusTagType(request.status)"
-            >{{ getStatusText(request.status) }}</el-tag>
+              :type="getStatusTagType(device.deviceIntegration)"
+            >{{ getStatusText(device.deviceIntegration) }}</el-tag>
           </div>
           <div class="card-body">
-            <p><strong>请求ID:</strong> {{ request.id }}</p>
-            <p><strong>来源平台:</strong> {{ request.sourcePlatform }}</p>
-            <p><strong>请求时间:</strong> {{ formatDate(request.requestTime) }}</p>
-            <p v-if="request.processedTime">
-              <strong>处理时间:</strong> {{ formatDate(request.processedTime) }}
-            </p>
-            <el-collapse v-if="request.deviceDetails">
+            <p><strong>设备ID:</strong> {{ device.id }}</p>
+            <p><strong>设备编码:</strong> {{ device.deviceCode }}</p>
+            <p><strong>创建时间:</strong> {{ formatDate(device.createdAt) }}</p>
+            <p><strong>更新时间:</strong> {{ formatDate(device.updatedAt) }}</p>
+            <el-collapse>
               <el-collapse-item title="设备详细信息">
-                <p><strong>型号:</strong> {{ request.deviceDetails.model || '未知' }}</p>
-                <p><strong>IP地址:</strong> {{ request.deviceDetails.ipAddress || '未知' }}</p>
-                <p><strong>MAC地址:</strong> {{ request.deviceDetails.macAddress || '未知' }}</p>
-                <p><strong>固件版本:</strong> {{ request.deviceDetails.firmwareVersion || '未知' }}</p>
+                <p><strong>设备类型:</strong> {{ device.deviceType || '未知' }}</p>
+                <p><strong>在线状态:</strong> 
+                  <el-tag :type="device.status === 1 ? 'success' : 'info'">
+                    {{ device.status === 1 ? '在线' : '离线' }}
+                  </el-tag>
+                </p>
+                <p v-if="device.latitude && device.longitude">
+                  <strong>位置:</strong> 经度: {{ device.longitude }}, 纬度: {{ device.latitude }}
+                </p>
               </el-collapse-item>
             </el-collapse>
           </div>
-          <div class="card-footer" v-if="request.status === 'pending'">
+          <div class="card-footer" v-if="device.deviceIntegration === 0">
             <el-button
-              @click="approveRequest(request)"
+              @click="approveDevice(device)"
               type="primary"
               size="small"
             >
               同意对接
             </el-button>
             <el-button
-              @click="rejectRequest(request.id)"
+              @click="rejectDevice(device.id)"
               type="danger"
               size="small"
             >
@@ -83,12 +86,12 @@
             </el-button>
           </div>
           <div class="card-footer processed-footer" v-else>
-            <p>请求已于 {{ formatDate(request.processedTime) }} 处理</p>
+            <p>处理时间: {{ formatDate(device.updatedAt) }}</p>
             <el-button 
-              v-if="request.status === 'approved'" 
+              v-if="device.deviceIntegration === 1" 
               type="success" 
               size="small"
-              @click="viewDeviceDetails(request)"
+              @click="viewDeviceDetails(device)"
             >
               查看设备
             </el-button>
@@ -104,38 +107,32 @@
       width="600px"
       @close="closeCreateRequestModal"
     >
-      <el-form :model="requestForm" label-width="120px" label-position="right">
+      <el-form :model="deviceForm" label-width="120px" label-position="right">
         <el-form-item label="设备名称" required>
-          <el-input v-model="requestForm.deviceName" />
+          <el-input v-model="deviceForm.deviceName" />
         </el-form-item>
-        <el-form-item label="来源平台" required>
-          <el-input v-model="requestForm.sourcePlatform" />
+        <el-form-item label="设备编码" required>
+          <el-input v-model="deviceForm.deviceCode" />
         </el-form-item>
-        <el-form-item label="协议类型" required>
-          <el-select v-model="requestForm.protocol" style="width: 100%">
+        <el-form-item label="设备类型" required>
+          <el-select v-model="deviceForm.deviceType" style="width: 100%">
             <el-option label="MQTT" value="MQTT" />
             <el-option label="HTTP" value="HTTP" />
             <el-option label="CoAP" value="CoAP" />
             <el-option label="Modbus" value="Modbus" />
           </el-select>
         </el-form-item>
-        <el-form-item label="设备型号">
-          <el-input v-model="requestForm.deviceDetails.model" />
+        <el-form-item label="经度">
+          <el-input v-model="deviceForm.longitude" />
         </el-form-item>
-        <el-form-item label="IP地址">
-          <el-input v-model="requestForm.deviceDetails.ipAddress" />
-        </el-form-item>
-        <el-form-item label="MAC地址">
-          <el-input v-model="requestForm.deviceDetails.macAddress" />
-        </el-form-item>
-        <el-form-item label="固件版本">
-          <el-input v-model="requestForm.deviceDetails.firmwareVersion" />
+        <el-form-item label="纬度">
+          <el-input v-model="deviceForm.latitude" />
         </el-form-item>
       </el-form>
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="closeCreateRequestModal">取消</el-button>
-          <el-button type="primary" @click="submitCreateRequest">提交请求</el-button>
+          <el-button type="primary" @click="submitCreateDevice">提交请求</el-button>
         </span>
       </template>
     </el-dialog>
@@ -184,7 +181,7 @@
 <script>
 import { ElMessage } from "element-plus";
 import { Plus } from '@element-plus/icons-vue';
-import { addDevice } from "@/api/device";
+import { listDevicesByAdminId, addDevice, updateDeviceIntegration } from "@/api/device";
 import { getProtocolList } from "@/api/protocol";
 import { addDeviceProtocol } from "@/api/deviceProtocol";
 
@@ -197,21 +194,19 @@ export default {
     return {
       isLoading: false,
       selectedStatusFilter: "all",
-      connectionRequests: [],
+      devices: [],
       showCreateRequestModal: false,
       showProtocolSelectModal: false,
-      requestForm: {
+      deviceForm: {
         deviceName: '',
-        sourcePlatform: '',
-        protocol: 'MQTT',
-        deviceDetails: {
-          model: '',
-          ipAddress: '',
-          macAddress: '',
-          firmwareVersion: ''
-        }
+        deviceCode: '',
+        deviceType: 'MQTT',
+        latitude: '',
+        longitude: '',
+        status: 1,
+        deviceIntegration: 0, // 默认未集成
       },
-      currentRequest: null,
+      currentDevice: null,
       protocols: [],
       selectedProtocol: null,
       loadingProtocols: false,
@@ -219,79 +214,44 @@ export default {
     };
   },
   computed: {
-    filteredRequests() {
+    filteredDevices() {
       if (this.selectedStatusFilter === "all") {
-        return this.connectionRequests.sort(
-          (a, b) => new Date(b.requestTime) - new Date(a.requestTime)
+        return this.devices.sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
         );
       }
-      return this.connectionRequests
-        .filter((req) => req.status === this.selectedStatusFilter)
-        .sort((a, b) => new Date(b.requestTime) - new Date(a.requestTime));
+      const integrationStatus = parseInt(this.selectedStatusFilter);
+      return this.devices
+        .filter((device) => device.deviceIntegration === integrationStatus)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     },
   },
   methods: {
-    async fetchConnectionRequests() {
+    async fetchDevices() {
       this.isLoading = true;
       
       try {
-        // 这里应该调用后端API获取设备对接请求列表
-        // 由于没有真实的后端API，我们使用模拟数据
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const result = await listDevicesByAdminId(this.adminId);
         
-        // 从localStorage中获取已保存的请求
-        const savedRequests = localStorage.getItem('connectionRequests');
-        if (savedRequests) {
-          this.connectionRequests = JSON.parse(savedRequests);
+        if (Array.isArray(result)) {
+          this.devices = result;
+        } else if (result && result.data && Array.isArray(result.data)) {
+          this.devices = result.data;
         } else {
-          // 初始化一些示例数据
-          this.connectionRequests = [
-            {
-              id: "REQ001",
-              deviceName: "智能环境监测仪",
-              sourcePlatform: "Alpha环境监测云",
-              protocol: "MQTT",
-              requestTime: new Date().toISOString(),
-              status: "pending",
-              processedTime: null,
-              deviceDetails: {
-                model: "EM-S100",
-                ipAddress: "192.168.1.101",
-                macAddress: "00:1A:2B:3C:4D:5E",
-                firmwareVersion: "v1.2.3"
-              }
-            },
-            {
-              id: "REQ002",
-              deviceName: "高清安防摄像头",
-              sourcePlatform: "Beta视频监控中心",
-              protocol: "HTTP",
-              requestTime: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-              status: "approved",
-              processedTime: new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString(),
-              deviceDetails: {
-                model: "CAM-HD2000",
-                ipAddress: "192.168.1.102",
-                macAddress: "00:1A:2B:3C:4D:5F",
-                firmwareVersion: "v2.0.1"
-              },
-              deviceId: 1 // 关联的设备ID
-            }
-          ];
-          
-          // 保存到localStorage
-          localStorage.setItem('connectionRequests', JSON.stringify(this.connectionRequests));
+          this.devices = [];
+          ElMessage.warning('获取设备列表失败，格式不符合预期');
         }
       } catch (error) {
-        console.error('获取设备对接请求失败:', error);
-        ElMessage.error('获取设备对接请求失败');
+        console.error('获取设备列表失败:', error);
+        ElMessage.error('获取设备列表失败');
+        this.devices = [];
       } finally {
         this.isLoading = false;
       }
     },
     
     formatDate(dateString) {
-      if (!dateString) return "";
+      if (!dateString) return "-";
       const date = new Date(dateString);
       return date.toLocaleString("zh-CN", {
         year: "numeric",
@@ -302,25 +262,23 @@ export default {
       });
     },
     
-    getStatusText(status) {
-      const map = {
-        pending: "待处理",
-        approved: "已同意",
-        rejected: "已拒绝"
-      };
-      return map[status] || "未知";
+    getStatusText(integrationStatus) {
+      if (integrationStatus === 1) return '已集成';
+      if (integrationStatus === 0) return '未集成';
+      if (integrationStatus === 3) return '已拒绝';
+      return '未知状态';
     },
     
-    getStatusTagType(status) {
-      if (status === "pending") return "warning";
-      if (status === "approved") return "success";
-      if (status === "rejected") return "danger";
+    getStatusTagType(integrationStatus) {
+      if (integrationStatus === 1) return "success";
+      if (integrationStatus === 0) return "warning";
+      if (integrationStatus === 3) return "danger";
       return "info";
     },
     
-    getCardStatusClass(status) {
-      if (status === "approved") return "card-approved";
-      if (status === "rejected") return "card-rejected";
+    getCardStatusClass(integrationStatus) {
+      if (integrationStatus === 1) return "card-approved";
+      if (integrationStatus === 3) return "card-rejected";
       return "card-pending";
     },
     
@@ -329,16 +287,14 @@ export default {
     },
     
     openCreateRequestModal() {
-      this.requestForm = {
+      this.deviceForm = {
         deviceName: '',
-        sourcePlatform: '',
-        protocol: 'MQTT',
-        deviceDetails: {
-          model: '',
-          ipAddress: '',
-          macAddress: '',
-          firmwareVersion: ''
-        }
+        deviceCode: '',
+        deviceType: 'MQTT',
+        latitude: '',
+        longitude: '',
+        status: 1,
+        deviceIntegration: 0, // 默认未集成
       };
       this.showCreateRequestModal = true;
     },
@@ -347,41 +303,43 @@ export default {
       this.showCreateRequestModal = false;
     },
     
-    submitCreateRequest() {
+    async submitCreateDevice() {
       // 表单验证
-      if (!this.requestForm.deviceName) {
+      if (!this.deviceForm.deviceName) {
         ElMessage.warning('请输入设备名称');
         return;
       }
-      if (!this.requestForm.sourcePlatform) {
-        ElMessage.warning('请输入来源平台');
+      if (!this.deviceForm.deviceCode) {
+        ElMessage.warning('请输入设备编码');
         return;
       }
       
-      // 创建新的对接请求
-      const newRequest = {
-        id: `REQ${Date.now().toString().slice(-6)}`,
-        deviceName: this.requestForm.deviceName,
-        sourcePlatform: this.requestForm.sourcePlatform,
-        protocol: this.requestForm.protocol,
-        requestTime: new Date().toISOString(),
-        status: "pending",
-        processedTime: null,
-        deviceDetails: { ...this.requestForm.deviceDetails }
-      };
-      
-      // 添加到请求列表
-      this.connectionRequests.unshift(newRequest);
-      
-      // 保存到localStorage
-      localStorage.setItem('connectionRequests', JSON.stringify(this.connectionRequests));
-      
-      ElMessage.success('对接请求已创建');
-      this.closeCreateRequestModal();
+      this.isLoading = true;
+      try {
+        // 准备提交到后端的数据
+        const deviceData = {
+          ...this.deviceForm,
+          adminId: this.adminId,
+        };
+        
+        // 调用添加设备API
+        const result = await addDevice(deviceData);
+        
+        ElMessage.success('设备对接请求已创建');
+        this.closeCreateRequestModal();
+        
+        // 刷新设备列表
+        this.fetchDevices();
+      } catch (error) {
+        console.error('创建设备失败:', error);
+        ElMessage.error('创建设备失败: ' + (error.message || '未知错误'));
+      } finally {
+        this.isLoading = false;
+      }
     },
     
-    async approveRequest(request) {
-      this.currentRequest = request;
+    async approveDevice(device) {
+      this.currentDevice = device;
       
       // 加载协议列表
       await this.loadProtocols();
@@ -395,7 +353,7 @@ export default {
       this.protocols = [];
       
       try {
-        const result = await getProtocolList({});
+        const result = await getProtocolList();
         
         if (Array.isArray(result)) {
           this.protocols = result;
@@ -422,7 +380,7 @@ export default {
     },
     
     async confirmProtocolSelect() {
-      if (!this.selectedProtocol || !this.currentRequest) {
+      if (!this.selectedProtocol || !this.currentDevice) {
         ElMessage.warning('请选择协议');
         return;
       }
@@ -430,48 +388,20 @@ export default {
       this.isLoading = true;
       
       try {
-        // 创建设备
-        const deviceData = {
-          deviceName: this.currentRequest.deviceName,
-          deviceCode: `${this.currentRequest.deviceDetails.model || 'DEV'}-${Date.now().toString().slice(-6)}`,
-          deviceType: this.currentRequest.protocol,
-          status: 1, // 在线
-          adminId: this.adminId,
-          latitude: '',
-          longitude: '',
-          deviceIntegration: 1, // 已集成
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
+        // 创建设备协议绑定
+        await addDeviceProtocol({
+          deviceId: this.currentDevice.id,
+          protocolId: this.selectedProtocol.id,
+          bindTime: new Date().toISOString().slice(0, 19).replace('T', ' ')
+        });
         
-        // 调用添加设备API
-        const result = await addDevice(deviceData);
+        // 更新设备集成状态为已集成(1)
+        await updateDeviceIntegration(this.currentDevice.id, 1);
         
-        // 获取新设备的ID
-        let deviceId;
-        if (result && result.data) {
-          deviceId = result.data;
-        }
+        ElMessage.success('设备对接成功');
         
-        if (deviceId) {
-          // 创建设备协议绑定
-          await addDeviceProtocol({
-            deviceId: deviceId,
-            protocolId: this.selectedProtocol.id
-          });
-          
-          // 更新请求状态
-          this.currentRequest.status = 'approved';
-          this.currentRequest.processedTime = new Date().toISOString();
-          this.currentRequest.deviceId = deviceId;
-          
-          // 保存到localStorage
-          localStorage.setItem('connectionRequests', JSON.stringify(this.connectionRequests));
-          
-          ElMessage.success('设备对接成功');
-        } else {
-          throw new Error('无法获取设备ID');
-        }
+        // 刷新设备列表
+        this.fetchDevices();
       } catch (error) {
         console.error('设备对接失败:', error);
         ElMessage.error('设备对接失败: ' + (error.message || '未知错误'));
@@ -481,33 +411,36 @@ export default {
       }
     },
     
-    rejectRequest(requestId) {
-      // 找到对应的请求
-      const request = this.connectionRequests.find(req => req.id === requestId);
+    async rejectDevice(deviceId) {
+      this.isLoading = true;
       
-      if (request) {
-        // 更新请求状态
-        request.status = 'rejected';
-        request.processedTime = new Date().toISOString();
+      try {
+        // 更新设备集成状态为已拒绝(3)
+        await updateDeviceIntegration(deviceId, 3);
         
-        // 保存到localStorage
-        localStorage.setItem('connectionRequests', JSON.stringify(this.connectionRequests));
+        ElMessage.success('已拒绝设备对接请求');
         
-        ElMessage.success('已拒绝对接请求');
+        // 刷新设备列表
+        this.fetchDevices();
+      } catch (error) {
+        console.error('拒绝设备对接失败:', error);
+        ElMessage.error('拒绝设备对接失败: ' + (error.message || '未知错误'));
+      } finally {
+        this.isLoading = false;
       }
     },
     
-    viewDeviceDetails(request) {
-      if (request.deviceId) {
+    viewDeviceDetails(device) {
+      if (device.id) {
         // 跳转到设备详情页
-        this.$router.push(`/device?id=${request.deviceId}`);
+        this.$router.push(`/device?id=${device.id}`);
       } else {
         ElMessage.warning('无法获取设备信息');
       }
     }
   },
   mounted() {
-    this.fetchConnectionRequests();
+    this.fetchDevices();
   }
 };
 </script>
