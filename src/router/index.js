@@ -9,6 +9,8 @@ import Alarm from "../views/Alarm.vue";
 import Statistics from "../views/Statistics.vue";
 import News from "../views/News.vue";
 import LoginView from "../views/Login.vue"; // 新增：导入登录组件
+import AdminProfile from '../views/AdminProfile.vue'
+import DeviceMessage from '../views/DeviceMessage.vue'
 
 function getCurrentUserPermissions() {
   // 从 localStorage 获取权限
@@ -18,75 +20,75 @@ function getCurrentUserPermissions() {
 
 const routes = [
   {
-    path: "/login", // 新增：登录页路由
+    path: "/login",
     name: "Login",
     component: LoginView,
-    meta: { requiresAuth: false }, // 登录页不需要认证
+    meta: { requiresAuth: false },
   },
   {
     path: "/",
-    redirect: "/login",
+    redirect: "/dashboard",
   },
   {
     path: "/dashboard",
     name: "Dashboard",
     component: Dashboard,
-    meta: { requiresAuth: false }, // 修改：大屏现在需要认证
+    meta: { requiresAuth: true },
   },
   {
-    path: "/admin",
-    name: "Admin",
-    component: Admin,
-    meta: { requiresAuth: false, permissionId: "admin" }, // 修改：个人中心需要认证
+    path: "/admin/profile",
+    name: "AdminProfile",
+    component: AdminProfile,
+    meta: { requiresAuth: true },
   },
   {
     path: "/device",
     name: "Device",
     component: Device,
-    meta: { requiresAuth: false, permissionId: "device" }, // 修改：设备管理需要认证
+    meta: { requiresAuth: true },
   },
   {
     path: "/connect",
     name: "Connect",
     component: Connect,
-    meta: { requiresAuth: false, permissionId: "connect" }, // 修改：设备对接需要认证
+    meta: { requiresAuth: true },
   },
   {
     path: "/protocol",
     name: "Protocol",
     component: Protocol,
-    meta: { requiresAuth: false, permissionId: "protocol" }, // 协议管理需要权限
+    meta: { requiresAuth: true },
   },
   {
     path: "/device-protocol",
     name: "DeviceProtocol",
     component: DeviceProtocol,
-    meta: { requiresAuth: false, permissionId: "device-protocol" }, // 设备协议绑定需要权限
+    meta: { requiresAuth: true },
   },
   {
     path: "/alarm",
     name: "Alarm",
     component: Alarm,
-    meta: { requiresAuth: false, permissionId: "alarm" }, // 修改：告警管理需要认证
+    meta: { requiresAuth: true },
   },
   {
     path: "/statistics",
     name: "Statistics",
     component: Statistics,
-    meta: { requiresAuth: false, permissionId: "statistics" }, // 统计分析需要权限
+    meta: { requiresAuth: true },
   },
   {
     path: "/news",
     name: "News",
     component: News,
-    meta: { requiresAuth: false, permissionId: "news" }, // 消息中心需要权限
+    meta: { requiresAuth: true },
   },
-  // 您可以添加一个统一的无权限页面路由
-  // {
-  //   path: '/no-permission',
-  //   name: 'NoPermission',
-  //   component: NoPermission
-  // }
+  {
+    path: "/device-message",
+    name: "DeviceMessage",
+    component: DeviceMessage,
+    meta: { requiresAuth: true },
+  },
 ];
 
 const router = createRouter({
@@ -96,47 +98,17 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
-  const userPermissions = getCurrentUserPermissions();
-  const routeRequiresAuth = to.matched.some(
-    (record) => record.meta.requiresAuth
-  );
-  const requiredPermissionId = to.meta.permissionId;
-
-  if (routeRequiresAuth && !isAuthenticated) {
-    // 如果路由需要认证但用户未登录，则重定向到登录页
+  
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    // 需要认证但未登录，重定向到登录页
     next({ name: "Login" });
-    return;
-  }
-
-  if (!routeRequiresAuth && isAuthenticated && to.name === "Login") {
-    // 如果用户已登录且尝试访问登录页，则重定向到首页
+  } else if (!to.meta.requiresAuth && isAuthenticated && to.name === "Login") {
+    // 已登录但访问登录页，重定向到首页
     next({ name: "Dashboard" });
-    return;
-  }
-
-  // 对于需要特定权限的已认证路由
-  if (routeRequiresAuth && isAuthenticated) {
-    if (requiredPermissionId) {
-      if (userPermissions.includes(requiredPermissionId)) {
-        to.meta.hasPermission = true;
-      } else {
-        to.meta.hasPermission = false;
-        // 如果没有权限，可以选择停留在当前页（组件内部处理显示），
-        // 或者重定向到统一的无权限页，或者首页
-        // 此处我们让组件自行处理 hasPermission 为 false 的情况
-      }
-    } else {
-      // 如果路由需要认证但没有指定 permissionId (例如 Dashboard)，则认为有权限访问
-      to.meta.hasPermission = true;
-    }
+  } else {
+    // 其他情况直接放行
     next();
-    return;
   }
-
-  // 对于不需要认证的页面 (例如登录页本身，如果requiresAuth为false)
-  // 或者其他未覆盖的情况，直接放行
-  to.meta.hasPermission = true; // 默认公共页面有权限
-  next();
 });
 
 export default router;

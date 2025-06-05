@@ -22,11 +22,6 @@
             </el-radio-group>
           </div>
         </el-col>
-        <el-col :span="8" class="text-right">
-          <el-button type="primary" @click="openAddProtocolModal">
-            <el-icon><Plus /></el-icon> 添加协议
-          </el-button>
-        </el-col>
       </el-row>
     </el-card>
 
@@ -76,25 +71,6 @@
             {{ formatDateTime(scope.row.updateTime) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="180">
-          <template #default="scope">
-            <el-button
-              size="small"
-              type="primary"
-              @click="openEditProtocolModal(scope.row)"
-            >
-              编辑
-            </el-button>
-            <el-popconfirm
-              title="确定要删除此协议吗？"
-              @confirm="handleDeleteProtocol(scope.row.id)"
-            >
-              <template #reference>
-                <el-button size="small" type="danger">删除</el-button>
-              </template>
-            </el-popconfirm>
-          </template>
-        </el-table-column>
       </el-table>
 
       <div v-if="!isLoading && displayProtocolList.length === 0" class="no-data">
@@ -116,58 +92,14 @@
         />
       </div>
     </el-card>
-
-    <!-- 协议表单弹窗 -->
-    <el-dialog
-      v-model="showProtocolFormModal"
-      :title="formTitle"
-      width="600px"
-      @close="closeProtocolFormModal"
-    >
-      <el-form :model="formData" label-width="100px" label-position="right">
-        <el-form-item label="协议名称" required>
-          <el-input v-model="formData.protocolName" />
-        </el-form-item>
-        <el-form-item label="协议编码" required>
-          <el-input v-model="formData.protocolCode" />
-        </el-form-item>
-        <el-form-item label="协议版本" required>
-          <el-input v-model="formData.version" />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="formData.status" style="width: 100%">
-            <el-option label="启用" :value="1" />
-            <el-option label="禁用" :value="0" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="描述">
-          <el-input 
-            v-model="formData.description" 
-            type="textarea" 
-            :rows="3" 
-            placeholder="请输入协议描述"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="closeProtocolFormModal">取消</el-button>
-          <el-button type="primary" @click="submitProtocolForm">保存</el-button>
-        </span>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script>
 import { ElMessage } from "element-plus";
-import { Plus } from '@element-plus/icons-vue';
-import { getProtocolList, addProtocol, updateProtocol, deleteProtocol } from "@/api/protocol";
+import { getProtocolList } from "@/api/protocol";
 
 export default {
-  components: { 
-    Plus
-  },
   data() {
     return {
       isLoading: false,
@@ -176,23 +108,11 @@ export default {
       protocolList: [], // 所有协议数据
       filteredProtocolList: [], // 过滤后的协议数据
       displayProtocolList: [], // 当前页显示的协议数据
-      showProtocolFormModal: false,
-      formData: {
-        id: null,
-        protocolName: '',
-        protocolCode: '',
-        version: '',
-        description: '',
-        status: 1
-      },
       currentPage: 1,
       pageSize: parseInt(localStorage.getItem('pageSize') || '10')
     };
   },
   computed: {
-    formTitle() {
-      return this.formData.id ? '编辑协议' : '添加协议';
-    },
     totalPages() {
       return Math.ceil(this.filteredProtocolList.length / this.pageSize) || 1;
     }
@@ -313,91 +233,6 @@ export default {
       
       this.applyFilters();
       this.updateDisplayList();
-    },
-    
-    openAddProtocolModal() {
-      this.formData = {
-        id: null,
-        protocolName: '',
-        protocolCode: '',
-        version: '',
-        description: '',
-        status: 1
-      };
-      this.showProtocolFormModal = true;
-    },
-    
-    openEditProtocolModal(protocol) {
-      this.formData = { ...protocol };
-      this.showProtocolFormModal = true;
-    },
-    
-    async submitProtocolForm() {
-      // 表单验证
-      if (!this.formData.protocolName) {
-        ElMessage.warning('请输入协议名称');
-        return;
-      }
-      if (!this.formData.protocolCode) {
-        ElMessage.warning('请输入协议编码');
-        return;
-      }
-      if (!this.formData.version) {
-        ElMessage.warning('请输入协议版本');
-        return;
-      }
-      
-      this.isLoading = true;
-      try {
-        // 准备提交到后端的数据
-        const submitData = {
-          protocolName: this.formData.protocolName,
-          protocolCode: this.formData.protocolCode,
-          version: this.formData.version,
-          description: this.formData.description || '',
-          status: this.formData.status
-        };
-        
-        if (this.formData.id) {
-          // 更新协议
-          submitData.id = this.formData.id;
-          await updateProtocol(submitData);
-          ElMessage.success('协议更新成功');
-        } else {
-          // 新增协议
-          await addProtocol(submitData);
-          ElMessage.success('协议添加成功');
-        }
-        
-        // 刷新协议列表
-        this.fetchProtocols();
-        // 关闭弹窗
-        this.closeProtocolFormModal();
-      } catch (error) {
-        console.error('保存协议失败:', error);
-        ElMessage.error('保存协议失败: ' + (error.message || '未知错误'));
-      } finally {
-        this.isLoading = false;
-      }
-    },
-    
-    async handleDeleteProtocol(id) {
-      this.isLoading = true;
-      try {
-        await deleteProtocol(id);
-        ElMessage.success('协议删除成功');
-        // 刷新协议列表
-        this.fetchProtocols();
-      } catch (error) {
-        console.error('删除协议失败:', error);
-        ElMessage.error('删除协议失败: ' + (error.message || '未知错误'));
-      } finally {
-        this.isLoading = false;
-      }
-    },
-    
-    closeProtocolFormModal() {
-      this.showProtocolFormModal = false;
     },
 
     handleSizeChange(newSize) {
@@ -527,10 +362,5 @@ export default {
 
 .filter-label {
   margin-right: 10px;
-}
-
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
 }
 </style> 

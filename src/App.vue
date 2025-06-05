@@ -29,6 +29,10 @@
           <el-icon><Cpu /></el-icon>
           <template #title>设备管理</template>
         </el-menu-item>
+        <el-menu-item index="/device-message">
+          <el-icon><ChatDotRound /></el-icon>
+          <template #title>设备消息管理</template>
+        </el-menu-item>
         <el-menu-item index="/connect">
           <el-icon><Connection /></el-icon>
           <template #title>设备对接</template>
@@ -53,7 +57,7 @@
           <el-icon><Message /></el-icon>
           <template #title>消息中心</template>
         </el-menu-item>
-        <el-menu-item index="/admin">
+        <el-menu-item index="/admin/profile">
           <el-icon><User /></el-icon>
           <template #title>个人中心</template>
         </el-menu-item>
@@ -75,7 +79,7 @@
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item @click="$router.push('/admin')">个人信息</el-dropdown-item>
+                <el-dropdown-item @click="$router.push('/admin/profile')">个人信息</el-dropdown-item>
                 <el-dropdown-item divided @click="logout">退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -92,18 +96,23 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { Document, Link } from '@element-plus/icons-vue';
+import { Document, Link, User, ChatDotRound } from '@element-plus/icons-vue';
+import axios from 'axios';
+import { useUserStore } from '@/stores/user'
 
 export default {
   components: {
     Document,
-    Link
+    Link,
+    User,
+    ChatDotRound
   },
   setup() {
     const router = useRouter();
     const route = useRoute();
+    const userStore = useUserStore();
     
     // 当前激活的菜单
     const activeMenu = computed(() => {
@@ -111,7 +120,7 @@ export default {
     });
     
     // 用户名
-    const username = ref(localStorage.getItem('username') || '用户');
+    const username = computed(() => userStore.username);
     
     // 侧边栏折叠状态
     const isCollapse = ref(false);
@@ -129,15 +138,42 @@ export default {
     };
     
     // 退出登录
-    const logout = () => {
-      localStorage.removeItem('isAuthenticated');
-      localStorage.removeItem('userPermissions');
-      localStorage.removeItem('username');
-      router.push('/login');
+    const logout = async () => {
+      try {
+        // 清除用户信息
+        userStore.clearUserInfo();
+        // 清除所有本地存储
+        localStorage.removeItem('adminId');
+        localStorage.removeItem('username');
+        localStorage.removeItem('token');
+        localStorage.removeItem('isAuthenticated');
+        localStorage.removeItem('userPermissions');
+        localStorage.removeItem('sidebarStatus');
+        
+        // 确保路由跳转完成
+        await router.replace('/login');
+      } catch (error) {
+        console.error('退出登录失败:', error);
+      }
+    };
+
+    // 更新最后登录时间
+    const updateLastLoginTime = async () => {
+      const adminId = userStore.adminId;
+      if (adminId) {
+        try {
+          await axios.put(`/api/admin/last-login/${adminId}`);
+        } catch (error) {
+          console.error('更新最后登录时间失败:', error);
+        }
+      }
     };
     
-    // 初始化侧边栏状态
-    initSidebarStatus();
+    // 初始化
+    onMounted(() => {
+      initSidebarStatus();
+      updateLastLoginTime();
+    });
     
     return {
       activeMenu,

@@ -36,7 +36,7 @@
 
       <div class="requests-grid">
         <el-card
-          v-for="device in filteredDevices"
+          v-for="device in paginatedDevices"
           :key="device.id"
           class="request-card"
           :class="getCardStatusClass(device.deviceIntegration)"
@@ -97,6 +97,19 @@
             </el-button>
           </div>
         </el-card>
+      </div>
+
+      <!-- 添加分页组件 -->
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[8, 16, 24, 32]"
+          :total="filteredDevices.length"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
       </div>
     </el-card>
 
@@ -210,7 +223,10 @@ export default {
       protocols: [],
       selectedProtocol: null,
       loadingProtocols: false,
-      adminId: 1 // 固定使用管理员ID为1
+      adminId: 1, // 固定使用管理员ID为1
+      // 添加分页相关数据
+      currentPage: 1,
+      pageSize: 8
     };
   },
   computed: {
@@ -225,6 +241,12 @@ export default {
         .filter((device) => device.deviceIntegration === integrationStatus)
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     },
+    // 添加分页计算属性
+    paginatedDevices() {
+      const start = (this.currentPage - 1) * this.pageSize;
+      const end = start + this.pageSize;
+      return this.filteredDevices.slice(start, end);
+    }
   },
   methods: {
     async fetchDevices() {
@@ -283,7 +305,7 @@ export default {
     },
     
     filterRequests() {
-      // 过滤请求，这里不需要额外操作，因为使用了计算属性
+      this.currentPage = 1; // 重置到第一页
     },
     
     openCreateRequestModal() {
@@ -437,6 +459,16 @@ export default {
       } else {
         ElMessage.warning('无法获取设备信息');
       }
+    },
+    
+    // 添加分页方法
+    handleSizeChange(val) {
+      this.pageSize = val;
+      this.currentPage = 1; // 重置到第一页
+    },
+    
+    handleCurrentChange(val) {
+      this.currentPage = val;
     }
   },
   mounted() {
@@ -545,5 +577,11 @@ export default {
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
+}
+
+.pagination-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
 }
 </style>
