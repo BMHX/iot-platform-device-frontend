@@ -31,13 +31,14 @@
           提示：如果输入以http开头的URL，将显示为图片
         </div>
       </el-form-item>
-      <el-form-item label="设备类型" required>
+      <el-form-item label="设备类型" prop="deviceType">
         <el-input v-model="formData.deviceType" />
       </el-form-item>
-      <el-form-item label="状态">
+      <el-form-item label="设备状态" prop="status">
         <el-select v-model="formData.status" style="width: 100%">
           <el-option label="在线" :value="1" />
           <el-option label="离线" :value="0" />
+          <el-option label="故障" :value="2" />
         </el-select>
       </el-form-item>
       <el-form-item label="位置信息">

@@ -4,17 +4,19 @@ import router from '@/router'
 
 // 创建axios实例
 const service = axios.create({
-  baseURL: '/', // url = base url + request url
-  timeout: 5000 // 请求超时时间
+  baseURL: 'http://localhost:8087', // 设置后端服务地址
+  timeout: 5000, // 请求超时时间
+  headers: {
+    'Content-Type': 'application/json'
+  }
 })
 
 // 请求拦截器
 service.interceptors.request.use(
   config => {
-    // 从localStorage获取token
+    // 获取token
     const token = localStorage.getItem('token')
     if (token) {
-      // 在请求头中添加token
       config.headers['Authorization'] = `Bearer ${token}`
     }
     return config
@@ -29,6 +31,7 @@ service.interceptors.request.use(
 service.interceptors.response.use(
   response => {
     const res = response.data
+    
     // 如果返回的状态码不是0，说明接口请求有误
     if (res.code !== 0) {
       ElMessage({

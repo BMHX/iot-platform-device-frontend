@@ -19,6 +19,7 @@
             <el-radio-button :label="null">全部</el-radio-button>
             <el-radio-button :label="1">在线</el-radio-button>
             <el-radio-button :label="0">离线</el-radio-button>
+            <el-radio-button :label="2">故障</el-radio-button>
           </el-radio-group>
           </div>
         </el-col>
@@ -93,8 +94,8 @@
         <el-table-column prop="deviceType" label="类型" width="120" />
         <el-table-column label="状态" width="100">
           <template #default="scope">
-            <el-tag :type="scope.row.status === 1 ? 'success' : 'info'">
-              {{ scope.row.status === 1 ? "在线" : "离线" }}
+            <el-tag :type="getStatusType(scope.row.status)">
+              {{ getStatusText(scope.row.status) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -211,7 +212,7 @@ export default {
       displayDeviceList: [], // 当前页显示的设备数据
       showDeviceFormModal: false,
       editingDevice: null,
-      adminId: 1, // 固定使用管理员ID为1
+      adminId: localStorage.getItem('adminId') || 1,
       useOnlineAPI: localStorage.getItem('useOnlineAPI') !== 'false',
       autoLoadLocation: localStorage.getItem('autoLoadLocation') !== 'false',
       currentPage: 1,
@@ -692,6 +693,58 @@ export default {
       if (deviceIntegration === 0) return '未集成';
       if (deviceIntegration === 3) return '已拒绝';
       return '未知状态';
+    },
+
+    getStatusType(status) {
+      switch (status) {
+        case 1:
+          return 'success'
+        case 0:
+          return 'info'
+        case 2:
+          return 'danger'
+        default:
+          return 'info'
+      }
+    },
+
+    getStatusText(status) {
+      switch (status) {
+        case 1:
+          return '在线'
+        case 0:
+          return '离线'
+        case 2:
+          return '故障'
+        default:
+          return '未知'
+      }
+    },
+
+    // 更新设备状态
+    async updateDeviceStatus(deviceId, newStatus) {
+      try {
+        const response = await request.put(`/api/device/${deviceId}/status`, {
+          status: newStatus
+        })
+        if (response.code === 0) {
+          ElMessage.success('设备状态更新成功')
+          // 更新本地设备列表
+          const device = this.deviceList.find(d => d.id === deviceId)
+          if (device) {
+            const oldStatus = device.status
+            device.status = newStatus
+            // 计算在线设备数量的变化
+            const oldOnlineCount = this.deviceList.filter(d => d.status === 1).length
+            const newOnlineCount = oldOnlineCount + (newStatus === 1 ? 1 : 0) - (oldStatus === 1 ? 1 : 0)
+            // 更新localStorage中的在线设备数记录
+            localStorage.setItem('lastOnlineDevices', oldOnlineCount.toString())
+          }
+        }
+      } catch (error) {
+        console.error('更新设备状态失败:', error)
+        ElMessage.error('更新设备状态失败')
+      }
     }
   },
   mounted() {

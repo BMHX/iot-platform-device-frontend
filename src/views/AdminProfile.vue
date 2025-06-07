@@ -35,10 +35,11 @@
 
         <el-form-item label="权限列表">
           <div class="permissions-list">
-            <el-tag v-for="permission in permissionList" 
-                    :key="permission.id" 
-                    class="permission-tag">
-              {{ permission.name }}
+            <el-tag v-for="(permission, index) in permissionList" 
+                    :key="index" 
+                    class="permission-tag"
+                    type="success">
+              {{ permission }}
             </el-tag>
           </div>
         </el-form-item>
@@ -113,12 +114,14 @@ export default {
     const fetchPermissionPackage = async (permissionId) => {
       try {
         console.log('Fetching permission package for ID:', permissionId)
-        const response = await axios.get(`/iot/prices/${permissionId}`)
+        const baseUrl = 'http://localhost:8086'
+        const response = await axios.get(`${baseUrl}/iot/prices/${permissionId}`)
         console.log('Permission package response:', response.data)
         if (response.data.code === 0) {
-          permissionName.value = response.data.data.permissionName
+          const permissionData = response.data.data
+          permissionName.value = permissionData.permissionName
           // 解析权限卡片字符串
-          const cardStr = response.data.data.card
+          const cardStr = permissionData.card
           console.log('Permission card string:', cardStr)
           const permissionIds = cardStr.replace(/[{}]/g, '').split(',').map(Number)
           console.log('Parsed permission IDs:', permissionIds)
@@ -135,12 +138,13 @@ export default {
     const fetchPermissionDetails = async (permissionIds) => {
       try {
         const permissions = []
+        const baseUrl = 'http://localhost:8086'
         for (const id of permissionIds) {
           console.log('Fetching permission details for ID:', id)
-          const response = await axios.get(`/iot/permission/${id}`)
+          const response = await axios.get(`${baseUrl}/iot/permission/${id}`)
           console.log('Permission details response:', response.data)
           if (response.data.code === 0) {
-            permissions.push(response.data.data)
+            permissions.push(response.data.data.name)
           }
         }
         console.log('All permissions:', permissions)
@@ -244,10 +248,13 @@ export default {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-top: 8px;
 }
 
 .permission-tag {
   margin-right: 8px;
   margin-bottom: 8px;
+  padding: 4px 8px;
+  font-size: 14px;
 }
 </style> 

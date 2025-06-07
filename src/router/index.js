@@ -8,6 +8,7 @@ import DeviceProtocol from "../views/DeviceProtocol.vue";
 import Alarm from "../views/Alarm.vue";
 import Statistics from "../views/Statistics.vue";
 import News from "../views/News.vue";
+import NewsSource from "../views/NewsSource.vue";
 import LoginView from "../views/Login.vue"; // 新增：导入登录组件
 import AdminProfile from '../views/AdminProfile.vue'
 import DeviceMessage from '../views/DeviceMessage.vue'
@@ -81,7 +82,13 @@ const routes = [
     path: "/news",
     name: "News",
     component: News,
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: false },
+  },
+  {
+    path: "/news-source",
+    name: "NewsSource",
+    component: NewsSource,
+    meta: { requiresAuth: false },
   },
   {
     path: "/device-message",
@@ -97,17 +104,12 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
+  const token = localStorage.getItem('token')
   
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    // 需要认证但未登录，重定向到登录页
-    next({ name: "Login" });
-  } else if (!to.meta.requiresAuth && isAuthenticated && to.name === "Login") {
-    // 已登录但访问登录页，重定向到首页
-    next({ name: "Dashboard" });
+  if (to.meta.requiresAuth && !token) {
+    next('/login')
   } else {
-    // 其他情况直接放行
-    next();
+    next()
   }
 });
 

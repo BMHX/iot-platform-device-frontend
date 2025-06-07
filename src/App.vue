@@ -53,10 +53,20 @@
           <el-icon><PieChart /></el-icon>
           <template #title>统计分析</template>
         </el-menu-item>
+        <el-sub-menu index="/news">
+          <template #title>
+            <el-icon><Document /></el-icon>
+            <span>资讯管理</span>
+          </template>
         <el-menu-item index="/news">
-          <el-icon><Message /></el-icon>
-          <template #title>消息中心</template>
+            <el-icon><Document /></el-icon>
+            <template #title>新闻管理</template>
+          </el-menu-item>
+          <el-menu-item index="/news-source">
+            <el-icon><Collection /></el-icon>
+            <template #title>来源管理</template>
         </el-menu-item>
+        </el-sub-menu>
         <el-menu-item index="/admin/profile">
           <el-icon><User /></el-icon>
           <template #title>个人中心</template>
@@ -98,7 +108,7 @@
 <script>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { Document, Link, User, ChatDotRound } from '@element-plus/icons-vue';
+import { Document, Link, User, ChatDotRound, Collection } from '@element-plus/icons-vue';
 import axios from 'axios';
 import { useUserStore } from '@/stores/user'
 
@@ -107,7 +117,8 @@ export default {
     Document,
     Link,
     User,
-    ChatDotRound
+    ChatDotRound,
+    Collection
   },
   setup() {
     const router = useRouter();

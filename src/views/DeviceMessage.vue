@@ -30,7 +30,7 @@
       <div class="table-container">
         <el-table
           v-loading="loading"
-          :data="paginatedData"
+          :data="tableData"
           border
           style="width: 100%"
           :header-cell-style="{
@@ -81,32 +81,26 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
 import { Refresh } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 
-const router = useRouter()
 const loading = ref(false)
 const tableData = ref([])
 const allData = ref([]) // 存储所有数据
+const total = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(10)
-const total = ref(0)
 
 const searchForm = ref({
   deviceId: '',
   timeRange: []
 })
 
-// 计算当前页的数据
-const paginatedData = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return allData.value.slice(start, end)
-})
+const router = useRouter()
 
 // 获取数据
 const fetchData = async () => {
@@ -122,13 +116,14 @@ const fetchData = async () => {
     console.log('后端返回的数据:', response.data)
     
     if (response.data && Array.isArray(response.data)) {
+      // 存储所有数据
       allData.value = response.data.map(item => ({
         ...item,
-        statusData: item.statusData || '{}'
+        statusData: item.statusData || '{}'  // 确保 statusData 字段存在
       }))
       total.value = allData.value.length
-      // 重置到第一页
-      currentPage.value = 1
+      // 根据当前页码和每页大小计算要显示的数据
+      updateTableData()
     } else {
       console.error('数据格式不正确:', response.data)
       ElMessage.error('数据格式不正确')
@@ -146,36 +141,11 @@ const fetchData = async () => {
   }
 }
 
-// 搜索
-const handleSearch = () => {
-  currentPage.value = 1
-  fetchData()
-}
-
-// 重置搜索
-const resetSearch = () => {
-  searchForm.value = {
-    deviceId: '',
-    timeRange: []
-  }
-  currentPage.value = 1
-  fetchData()
-}
-
-// 刷新数据
-const handleRefresh = () => {
-  fetchData()
-}
-
-// 分页大小改变
-const handleSizeChange = (val) => {
-  pageSize.value = val
-  currentPage.value = 1
-}
-
-// 页码改变
-const handleCurrentChange = (val) => {
-  currentPage.value = val
+// 更新表格数据（前端分页）
+const updateTableData = () => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  tableData.value = allData.value.slice(start, end)
 }
 
 // 解析温度数据
@@ -204,6 +174,39 @@ const getHumidity = (statusData) => {
     console.error('解析湿度数据失败:', e, '原始数据:', statusData)
     return '-'
   }
+}
+
+// 搜索
+const handleSearch = () => {
+  currentPage.value = 1
+  fetchData()
+}
+
+// 重置搜索
+const resetSearch = () => {
+  searchForm.value = {
+    deviceId: '',
+    timeRange: []
+  }
+  currentPage.value = 1
+  fetchData()
+}
+
+// 分页大小改变
+const handleSizeChange = (val) => {
+  pageSize.value = val
+  updateTableData()
+}
+
+// 页码改变
+const handleCurrentChange = (val) => {
+  currentPage.value = val
+  updateTableData()
+}
+
+// 刷新数据
+const handleRefresh = () => {
+  fetchData()
 }
 
 // 格式化日期时间

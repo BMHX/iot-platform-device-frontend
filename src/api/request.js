@@ -3,7 +3,7 @@ import { ElMessage } from 'element-plus';
 
 // 创建axios实例
 const service = axios.create({
-  baseURL: '', // 移除base_url前缀，完全依赖代理配置
+  baseURL: 'http://localhost:8087', // 修改为正确的后端地址
   timeout: 15000, // 请求超时时间
   headers: {
     'Content-Type': 'application/json'
@@ -13,15 +13,15 @@ const service = axios.create({
 // 请求拦截器
 service.interceptors.request.use(
   config => {
+    // 从localStorage获取token
+    // const token = localStorage.getItem('token');
+    // if (token) {
+    //   config.headers['Authorization'] = `Bearer ${token}`;
+    // }
+    
     console.log('请求URL:', config.url);
     console.log('请求方法:', config.method);
     console.log('请求参数:', config.params || config.data);
-    
-    // 可以从localStorage获取token并添加到请求头
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
     return config;
   },
   error => {
@@ -36,22 +36,29 @@ service.interceptors.response.use(
     console.log('响应数据:', response.data);
     const res = response.data;
     
-    // 检查响应结构
-    if (res.code !== undefined) {
-      // 标准响应结构: { code: 0, msg: '', data: xxx }
-      if (res.code !== 0) {
-        ElMessage.error(res.msg || '请求失败');
-        return Promise.reject(new Error(res.msg || '请求失败'));
-      } else {
-        return res.data;
-      }
-    } else if (res && typeof res === 'object' && 'data' in res) {
-      // 处理格式为 { data: xxx } 的响应
-      return res.data;
-    } else {
-      // 其他结构，直接返回
-      return res;
+    // 如果返回的状态码不是0，说明接口请求有误
+    if (res.code !== 0 && res.code !== undefined) {
+      ElMessage({
+        message: res.msg || '请求失败',
+        type: 'error',
+        duration: 5 * 1000
+      });
+      
+      // 401: 未登录或token过期
+      // if (res.code === 401) {
+      //   // 清除用户信息
+      //   localStorage.removeItem('token');
+      //   localStorage.removeItem('isAuthenticated');
+      //   localStorage.removeItem('adminId');
+      //   localStorage.removeItem('username');
+        
+      //   // 跳转到登录页
+      //   window.location.href = '/login';
+      // }
+      return Promise.reject(new Error(res.msg || '请求失败'));
     }
+    
+    return res;
   },
   error => {
     console.error('响应错误:', error);
@@ -73,10 +80,13 @@ service.interceptors.response.use(
       switch (error.response.status) {
         case 401:
           message = '未授权，请重新登录';
-          // 可以在这里处理登出逻辑
-          break;
-        case 403:
-          message = '拒绝访问';
+          // 清除用户信息
+          // localStorage.removeItem('token');
+          // localStorage.removeItem('isAuthenticated');
+          // localStorage.removeItem('adminId');
+          // localStorage.removeItem('username');
+          // 跳转到登录页
+          // window.location.href = '/login';
           break;
         case 404:
           message = '请求的资源不存在';
