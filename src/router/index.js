@@ -76,7 +76,7 @@ const routes = [
     path: "/statistics",
     name: "Statistics",
     component: Statistics,
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: false },
   },
   {
     path: "/news",

@@ -1,376 +1,774 @@
 <template>
-  <div class="statistics-page-styles">
-    <div v-if="hasPermission">
-      <!-- 页面头部，包含标题和操作区域 -->
-      <header class="page-header">
-        <h1>统计分析</h1>
-        <div class="actions">
-          <select v-model="selectedTimeRange" @change="fetchAllStatisticsData">
-            <option value="last24h">过去24小时</option>
-            <option value="last7d">过去7天</option>
-            <option value="last30d">过去30天</option>
-          </select>
-          <button class="export-btn" @click="exportReport">导出报告</button>
-        </div>
-      </header>
-
-      <!-- 汇总卡片 -->
-      <div class="summary-cards">
-        <div class="summary-card">
-          <h3>总设备数</h3>
-          <p class="count">{{ summaryData.totalDevices }}</p>
-        </div>
-        <div class="summary-card">
-          <h3>累计告警数</h3>
-          <p class="count">{{ summaryData.totalAlarms }}</p>
-          <span
-            :class="[
-              'change',
-              summaryData.alarmChange >= 0 ? 'positive' : 'negative',
-            ]"
-          >
-            {{ summaryData.alarmChange >= 0 ? "+" : ""
-            }}{{ summaryData.alarmChange }}% (较上周期)
-          </span>
-        </div>
-        <div class="summary-card">
-          <h3>数据存储量 (GB)</h3>
-          <p class="count">{{ summaryData.dataStorage }}</p>
-        </div>
-        <div class="summary-card">
-          <h3>在线设备率</h3>
-          <p class="count">{{ summaryData.onlineRate }}%</p>
-        </div>
+  <div class="statistics-container">
+    <el-card class="box-card">
+      <template #header>
+        <div class="card-header">
+          <span>摄像头监控与管理</span>
       </div>
-
-      <!-- 图表网格 -->
-      <div class="charts-grid">
-        <div class="chart-container">
-          <h4>设备类型分布</h4>
-          <div class="chart-placeholder">饼图占位符 (设备类型)</div>
-          <!-- <canvas id="deviceTypeChart"></canvas> -->
-        </div>
-        <div class="chart-container">
-          <h4>告警趋势分析 ({{ selectedTimeRangeText }})</h4>
-          <div class="chart-placeholder">折线图占位符 (告警趋势)</div>
-          <!-- <canvas id="alarmTrendChart"></canvas> -->
-        </div>
-        <div class="chart-container">
-          <h4>数据流量统计 (Top 5 设备)</h4>
-          <div class="chart-placeholder">柱状图占位符 (数据流量)</div>
-          <!-- <canvas id="dataTrafficChart"></canvas> -->
-        </div>
-        <div class="chart-container">
-          <h4>活跃设备地理分布</h4>
-          <div class="chart-placeholder">地图占位符 (地理分布)</div>
-          <!-- <div id="deviceLocationMap" style="height: 280px;"></div> -->
-        </div>
+      </template>
+      <el-row :gutter="20">
+        <!-- 左侧视频播放器区域 -->
+        <el-col :span="16">
+          <div class="video-player-container">
+            <div v-if="currentCamera && currentCamera.type.toLowerCase() === 'rtsp'" class="video-box">
+              <video ref="videoRef" class="video-js vjs-default-skin" controls preload="auto" width="100%" height="auto">
+                您的浏览器不支持 HTML5 视频。
+              </video>
+    </div>
+            <div v-else-if="currentCamera && currentCamera.type.toLowerCase() === 'hls'" class="video-box">
+              <canvas ref="canvasRef" width="1280" height="720" style="background: black;"></canvas>
+      </div>
+            <div v-else class="video-placeholder">
+              <span>请选择摄像头进行监控</span>
+      </div>
+            <div class="video-controls" v-if="currentCamera && currentCamera.type.toLowerCase() === 'hls'">
+              <el-button type="primary" @click="startRecording" :disabled="isRecording">开始录制</el-button>
+              <el-button type="warning" @click="stopRecording" :disabled="!isRecording">停止录制</el-button>
+              <el-button type="success" @click="startPlayback" :disabled="isPlayingback || recordedFrames.length === 0">回看</el-button>
+              <el-button type="info" @click="stopPlayback" :disabled="!isPlayingback">停止回看</el-button>
+              <el-button type="danger" @click="clearRecordedFrames" :disabled="recordedFrames.length === 0">清空录制</el-button>
       </div>
     </div>
-    <div v-else class="no-permission-message">
-      <h2>权限不足</h2>
-      <p>抱歉，您没有访问此页面的权限。</p>
-    </div>
+        </el-col>
+
+        <!-- 右侧摄像头列表和管理 -->
+        <el-col :span="8">
+          <div class="camera-list-container">
+            <el-button type="primary" @click="openAddDialog" style="margin-bottom: 20px;">添加摄像头</el-button>
+
+            <el-table :data="cameraList" style="width: 100%;" border>
+              <el-table-column prop="name" label="名称" width="120"></el-table-column>
+              <el-table-column prop="type" label="类型" width="80"></el-table-column>
+              <el-table-column label="操作" width="auto">
+                <template #default="scope">
+                  <el-button size="small" @click="playVideo(scope.row)">监控</el-button>
+                  <el-button size="small" @click="handleEdit(scope.row)">编辑</el-button>
+                  <el-button size="small" type="danger" @click="handleDelete(scope.row.id)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </el-col>
+      </el-row>
+    </el-card>
+
+    <!-- 添加/编辑摄像头对话框 -->
+    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑摄像头' : '添加摄像头'" width="500px">
+      <el-form :model="form" ref="formRef" :rules="rules" label-width="100px">
+        <el-form-item label="名称" prop="name">
+          <el-input v-model="form.name"></el-input>
+        </el-form-item>
+        <el-form-item label="类型" prop="type">
+          <el-select v-model="form.type" placeholder="请选择摄像头类型">
+            <el-option label="RTSP" value="rtsp"></el-option>
+            <el-option label="HLS" value="hls"></el-option>
+            <!-- 更多类型 -->
+          </el-select>
+        </el-form-item>
+        <el-form-item label="流地址" prop="streamUrl">
+          <el-input v-model="form.streamUrl"></el-input>
+        </el-form-item>
+        <el-form-item label="用户名">
+          <el-input v-model="form.username"></el-input>
+        </el-form-item>
+        <el-form-item label="密码">
+          <el-input v-model="form.password" type="password"></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="isEdit ? handleUpdate() : handleSubmit()">
+            {{ isEdit ? '更新' : '添加' }}
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
-<script>
-import { useRoute } from "vue-router"; // 引入 useRoute
-import { computed } from "vue"; // 引入 computed
+<script setup>
+import { ref, onMounted, onUnmounted, nextTick } from 'vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import axios from 'axios';
+import videojs from 'video.js';
+import 'video.js/dist/video-js.css';
+// import flvjs from 'flv.js'; // 暂时不需要flv.js，因为切换到MJPEG/Canvas
+// import Hls from 'hls.js'; // 暂时不需要Hls.js
 
-export default {
-  name: "StatisticsPage",
-  setup() {
-    // 改用 setup 函数以使用 Composition API
-    const route = useRoute();
-    const hasPermission = computed(() => route.meta.hasPermission === true);
+// 响应式数据
+const cameraList = ref([]);
+const currentCamera = ref(null);
+const videoRef = ref(null);
+const canvasRef = ref(null);
+const dialogVisible = ref(false);
+const isEdit = ref(false);
+const formRef = ref(null);
+const form = ref({
+  id: null,
+  name: '',
+  type: '',
+  streamUrl: '',
+  username: '',
+  password: '',
+});
 
-    // 将原 data 中的属性移到 setup 中并用 ref 或 reactive 包裹
-    // 这里为了简化，我将直接在返回对象中定义，但对于复杂状态建议使用 ref
-    const selectedTimeRange = "last7d"; // 默认值，后续可以改为 ref
-    const summaryData = {
-      totalDevices: 0,
-      totalAlarms: 0,
-      alarmChange: 0,
-      dataStorage: 0,
-      onlineRate: 0,
-    }; // 默认值，后续可以改为 reactive
-    // ... 其他 data 属性也需要类似处理
+// 视频播放器实例 (用于flv.js或hls.js)
+let flvPlayerInstance = null; // 用于存储flv.js实例
+let mjpegStreamReader; // 用于存储MJPEG流的reader
 
-    return {
-      hasPermission,
-      // 需要将 data, computed, methods 中的内容迁移到 setup 中或保持 Options API 结构并调整
-      // 为保持示例简洁，此处仅展示 hasPermission 的集成
-      // 您需要将原有的 data, computed, methods 迁移或适配
-      selectedTimeRange, // 示例，实际应为 ref
-      summaryData, // 示例，实际应为 reactive
-      // selectedTimeRangeText, // 需要重新实现为 computed
-      // fetchAllStatisticsData, // 需要重新实现为 method
-      // loadChartData,
-      // generateDeviceTypeData,
-      // generateAlarmTrendData,
-      // generateDataTrafficData,
-      // exportReport,
-    };
-  },
-  // 如果您想继续使用 Options API，可以这样获取 hasPermission:
-  // computed: {
-  //   hasPermission() {
-  //     return this.$route.meta.hasPermission === true;
-  //   },
-  //   selectedTimeRangeText() { ... existing computed ... },
-  // },
-  data() {
-    return {
-      isLoading: false,
-      selectedTimeRange: "last7d",
-      summaryData: {
-        totalDevices: 0,
-        totalAlarms: 0,
-        alarmChange: 0,
-        dataStorage: 0,
-        onlineRate: 0,
-      },
-      deviceTypeData: { labels: [], datasets: [] },
-      alarmTrendData: { labels: [], datasets: [] },
-      dataTrafficData: { labels: [], datasets: [] },
-    };
-  },
-  computed: {
-    // 如果不使用 setup，则在这里定义 hasPermission
-    hasPermission() {
-      return this.$route.meta.hasPermission === true;
-    },
-    selectedTimeRangeText() {
-      const ranges = {
-        last24h: "过去24小时",
-        last7d: "过去7天",
-        last30d: "过去30天",
-      };
-      return ranges[this.selectedTimeRange] || "";
-    },
-  },
-  methods: {
-    async fetchAllStatisticsData() {
-      if (!this.hasPermission) return; // 如果没有权限，不加载数据
-      this.isLoading = true;
-      console.log(`调用后端API: 获取统计数据 (${this.selectedTimeRangeText})`);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      this.summaryData = {
-        totalDevices: 1250,
-        totalAlarms: 582,
-        alarmChange: -5.2,
-        dataStorage: 780.5,
-        onlineRate: 92.5,
-      };
-      this.deviceTypeData = this.generateDeviceTypeData();
-      this.alarmTrendData = this.generateAlarmTrendData();
-      this.dataTrafficData = this.generateDataTrafficData();
-      this.isLoading = false;
-    },
-    loadChartData() {
-      this.fetchAllStatisticsData();
-    },
-    generateDeviceTypeData() {
-      return {
-        labels: ["传感器", "摄像头", "执行器", "网关", "其他"],
-        datasets: [
-          {
-            data: [300, 250, 150, 100, 50],
-            backgroundColor: [
-              "#4CAF50",
-              "#2196F3",
-              "#FFC107",
-              "#E91E63",
-              "#9E9E9E",
-            ],
-          },
-        ],
-      };
-    },
-    generateAlarmTrendData() {
-      let labels = [];
-      let data = [];
-      let days = 7;
-      if (this.selectedTimeRange === "last24h") days = 1;
-      if (this.selectedTimeRange === "last30d") days = 30;
+// 录制相关
+const isRecording = ref(false);
+const recordedFrames = ref([]); // 存储录制的Blob图片帧
+const isPlayingback = ref(false);
+let playbackTimer = null; // 用于回放的定时器
+let currentPlaybackFrameIndex = 0; // 当前回放帧的索引
 
-      for (
-        let i = 0;
-        i < (this.selectedTimeRange === "last24h" ? 24 : days);
-        i++
-      ) {
-        if (this.selectedTimeRange === "last24h") {
-          labels.push(`${i}:00`);
-        } else {
-          labels.push(`Day ${i + 1}`);
-        }
-        data.push(Math.floor(Math.random() * 50) + 10);
-      }
-      return {
-        labels,
-        datasets: [
-          { label: "告警数", data, borderColor: "#f87979", tension: 0.1 },
-        ],
-      };
-    },
-    generateDataTrafficData() {
-      return {
-        labels: ["设备A", "设备B", "设备C", "设备D", "设备E"],
-        datasets: [
-          {
-            label: "数据流量(MB)",
-            data: [120, 90, 75, 60, 40],
-            backgroundColor: "#8884d8",
-          },
-        ],
-      };
-    },
-    exportReport() {
-      alert("导出报告功能暂未实现。");
-    },
-  },
-  watch: {
-    selectedTimeRange() {
-      if (this.hasPermission) {
-        // 仅在有权限时响应变化
-        this.fetchAllStatisticsData();
-      }
-    },
-    // 监听路由变化，确保在直接导航到此页面（非首次加载）时也能正确判断权限
-    "$route.meta.hasPermission"(newVal, oldVal) {
-      if (newVal === true && !oldVal) {
-        // 如果权限从无到有（例如，通过某种方式刷新了权限状态并重新评估了路由）
-        this.fetchAllStatisticsData();
-      }
-    },
-  },
-  mounted() {
-    if (this.hasPermission) {
-      this.fetchAllStatisticsData();
-    }
-  },
+// 录制函数
+const startRecording = () => {
+  console.log('开始录制...');
+  // 如果正在回放，先停止回放
+  if (isPlayingback.value) {
+    stopPlayback();
+  }
+  recordedFrames.value = []; // 清空之前的录制
+  isRecording.value = true;
+  ElMessage.success('开始录制视频！');
 };
+
+const stopRecording = () => {
+  console.log('停止录制。');
+  isRecording.value = false;
+  ElMessage.info(`录制停止，共录制 ${recordedFrames.value.length} 帧。`);
+};
+
+const clearRecordedFrames = () => {
+  console.log('清空录制的帧。');
+  recordedFrames.value.forEach(blob => URL.revokeObjectURL(blob)); // 释放Blob URL资源
+  recordedFrames.value = [];
+  currentPlaybackFrameIndex = 0;
+  ElMessage.info('录制的帧已清空。');
+};
+
+// 表单校验规则
+const rules = {
+  name: [{ required: true, message: '请输入摄像头名称', trigger: 'blur' }],
+  type: [{ required: true, message: '请选择摄像头类型', trigger: 'change' }],
+  streamUrl: [{ required: true, message: '请输入流地址', trigger: 'blur' }],
+};
+
+// 打开添加摄像头对话框
+const openAddDialog = () => {
+  isEdit.value = false;
+  form.value = {
+    id: null,
+    name: '',
+    type: '',
+    streamUrl: '',
+    username: 'admin',
+    password: 'admin',
+  };
+  dialogVisible.value = true;
+  if (formRef.value) {
+    formRef.value.resetFields();
+  }
+};
+
+// 编辑摄像头
+const handleEdit = (row) => {
+  console.log('准备编辑摄像头，原始数据:', row);
+  isEdit.value = true;
+  form.value = {
+    id: row.id,
+    name: row.name,
+    type: row.type,
+    streamUrl: row.streamUrl,
+    username: row.username || 'admin',  // 设置默认值
+    password: row.password || 'admin'   // 设置默认值
+  };
+  console.log('编辑表单初始化数据:', form.value);
+  dialogVisible.value = true;
+};
+
+// 更新摄像头
+const handleUpdate = async () => {
+  if (!formRef.value) return;
+  await formRef.value.validate(async (valid) => {
+    if (valid) {
+      try {
+        console.log('更新摄像头，表单数据:', form.value);
+        // 确保认证信息存在
+        if (!form.value.username || !form.value.password) {
+          ElMessage.warning('请填写摄像头的用户名和密码');
+          return;
+        }
+        const response = await axios.put('/api/camera', form.value);
+        console.log('更新摄像头响应:', response);
+        if (response.data.code === 0) {
+          ElMessage.success('摄像头更新成功!');
+          dialogVisible.value = false;
+          // 立即更新本地列表中的摄像头信息
+          const index = cameraList.value.findIndex(c => c.id === form.value.id);
+          if (index !== -1) {
+            cameraList.value[index] = { ...form.value };
+          }
+          getCameraList(); // 重新获取列表
+        } else {
+          ElMessage.error('摄像头更新失败: ' + (response.data.msg || '未知错误'));
+        }
+      } catch (error) {
+        console.error('更新摄像头失败:', error);
+        if (error.response) {
+          console.error('错误状态码:', error.response.status);
+          console.error('错误数据:', error.response.data);
+        }
+        ElMessage.error('更新摄像头失败: ' + (error.response?.data?.msg || error.message));
+      }
+    } else {
+      ElMessage.warning('请检查表单填写是否完整和正确。');
+      return false;
+    }
+  });
+};
+
+// 提交新摄像头
+const handleSubmit = async () => {
+  if (!formRef.value) return;
+  await formRef.value.validate(async (valid) => {
+    if (valid) {
+      try {
+        console.log('提交新摄像头，表单数据:', form.value);
+        // 确保认证信息存在
+        if (!form.value.username || !form.value.password) {
+          ElMessage.warning('请填写摄像头的用户名和密码');
+          return;
+        }
+        const response = await axios.post('/api/camera', form.value);
+        console.log('添加摄像头响应:', response);
+        if (response.data.code === 0) {
+          ElMessage.success('摄像头添加成功!');
+          dialogVisible.value = false;
+          getCameraList(); // 重新获取列表
+        } else {
+          ElMessage.error('摄像头添加失败: ' + (response.data.msg || '未知错误'));
+        }
+      } catch (error) {
+        console.error('添加摄像头失败:', error);
+        if (error.response) {
+          console.error('错误状态码:', error.response.status);
+          console.error('错误数据:', error.response.data);
+        }
+        ElMessage.error('添加摄像头失败: ' + (error.response?.data?.msg || error.message));
+      }
+    } else {
+      ElMessage.warning('请检查表单填写是否完整和正确。');
+      return false;
+    }
+  });
+};
+
+// 删除摄像头
+const handleDelete = async (id) => {
+  ElMessageBox.confirm('确定要删除此摄像头吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning',
+  })
+    .then(async () => {
+      try {
+        const response = await axios.delete(`/api/camera/${id}`);
+        if (response.data.code === 0) {
+          ElMessage.success('摄像头删除成功!');
+          getCameraList(); // 重新获取列表
+          if (currentCamera.value && currentCamera.value.id === id) {
+            currentCamera.value = null; // 如果删除的是当前播放的摄像头，则清空
+            if (flvPlayerInstance) {
+              flvPlayerInstance.destroy();
+              flvPlayerInstance = null;
+            }
+            if (mjpegStreamReader) {
+                mjpegStreamReader.abort();
+                mjpegStreamReader = null;
+            }
+          }
+        } else {
+          ElMessage.error('摄像头删除失败: ' + (response.data.msg || '未知错误'));
+        }
+      } catch (error) {
+        console.error('删除摄像头失败:', error);
+        ElMessage.error('删除摄像头失败: ' + (error.response?.data?.msg || error.message));
+      }
+    })
+    .catch(() => {
+      ElMessage.info('已取消删除。');
+    });
+};
+
+// 获取摄像头列表
+const getCameraList = async () => {
+  console.log('开始获取摄像头列表');
+  try {
+    const response = await axios.get('/api/camera/list');
+    console.log('摄像头列表响应:', response);
+    if (response.data.code === 0) {
+      cameraList.value = response.data.data;
+      console.log('成功获取摄像头列表，详细信息:', cameraList.value.map(camera => ({
+        id: camera.id,
+        name: camera.name,
+        type: camera.type,
+        streamUrl: camera.streamUrl,
+        username: camera.username,
+        password: camera.password
+      })));
+    } else {
+      ElMessage.error('获取摄像头列表失败: ' + (response.data.msg || '未知错误'));
+    }
+  } catch (error) {
+    console.error('获取摄像头列表失败:', error);
+    if (error.response) {
+      console.error('错误状态码:', error.response.status);
+      console.error('错误数据:', error.response.data);
+    }
+    ElMessage.error('获取摄像头列表失败: ' + (error.response?.data?.msg || error.message));
+  }
+}
+
+// 播放视频流
+const playVideo = async (camera) => {
+  try {
+    // 检查摄像头对象的完整性
+    console.log('准备播放视频，摄像头信息:', {
+      id: camera.id,
+      name: camera.name,
+      type: camera.type,
+      streamUrl: camera.streamUrl,
+      username: camera.username,
+      password: camera.password
+    });
+
+    // 验证必要的字段
+    if (!camera.username || !camera.password) {
+      throw new Error('摄像头缺少认证信息，请先编辑摄像头添加用户名和密码');
+    }
+
+    // 停止并清理之前的播放器实例或流
+    if (flvPlayerInstance) {
+      flvPlayerInstance.destroy();
+      flvPlayerInstance = null;
+    }
+    if (mjpegStreamReader) {
+        mjpegStreamReader.abort(); // 中止Fetch请求
+        mjpegStreamReader = null;
+    }
+    // 确保canvas清空
+    if (canvasRef.value) {
+      const ctx = canvasRef.value.getContext('2d');
+      ctx.clearRect(0, 0, canvasRef.value.width, canvasRef.value.height);
+    }
+    
+    // 如果正在回放，先停止回放
+    if (isPlayingback.value) {
+      stopPlayback();
+    }
+
+    currentCamera.value = camera;
+    console.log('开始播放视频:', camera);
+
+    // 等待DOM更新，确保video或canvas元素存在
+    await nextTick();
+
+    if (camera.type.toLowerCase() === 'rtsp') {
+      // RTSP 播放逻辑 (如果有，这里保留)
+      // 目前我们的RTSP是通过flv.js代理的，需要确保flv.js可用并配置
+      // 如果flv.js不可用，可能需要使用videojs-contrib-hls或其他RTSP兼容方案
+      const videoElement = videoRef.value;
+      if (!videoElement) {
+        throw new Error('找不到视频播放器元素');
+      }
+
+      if (flvjs.isSupported()) {
+        flvPlayerInstance = flvjs.createPlayer({
+          type: 'flv',
+          url: camera.streamUrl,
+        });
+        flvPlayerInstance.attachMediaElement(videoElement);
+        flvPlayerInstance.load();
+        videoElement.play();
+      } else {
+        ElMessage.error('您的浏览器不支持FLV播放，请尝试其他浏览器或检查FLV.js是否正确加载。');
+      }
+    } else if (camera.type.toLowerCase() === 'hls') {
+      console.log('使用MJPEG通过代理播放视频流 (Canvas):', camera.streamUrl + '/video');
+
+      const canvasElement = canvasRef.value;
+      if (!canvasElement) {
+          throw new Error('找不到Canvas播放器元素');
+      }
+      const ctx = canvasElement.getContext('2d');
+      
+      const streamToProxy = camera.streamUrl + '/video';
+      const proxyUrl = `/api/proxy/stream?url=${encodeURIComponent(streamToProxy)}`;
+
+      // 将camera对象传递给readMjpegStream函数
+      await readMjpegStream(proxyUrl, canvasElement, ctx, camera);
+    } else {
+      throw new Error('不支持的视频流类型: ' + camera.type);
+    }
+  } catch (error) {
+    console.error('视频播放器初始化失败:', error);
+    ElMessage.error('视频播放器初始化失败: ' + error.message);
+    currentCamera.value = null;
+  }
+}
+
+// 读取MJPEG流并显示在Canvas上
+const readMjpegStream = async (proxyUrl, canvasElement, ctx, camera) => {
+  console.log('开始读取MJPEG流，使用认证信息:', { username: camera.username, password: camera.password });
+
+  let authString = '';
+  if (camera.username && camera.password) {
+    authString = btoa(`${camera.username}:${camera.password}`);
+  }
+
+  console.log('生成的认证头:', authString ? `Basic ${authString}` : '无');
+
+  let controller = new AbortController();
+  mjpegStreamReader = controller.signal; // 保存controller.signal用于中止
+
+  try {
+    const response = await fetch(proxyUrl, {
+      headers: {
+        'Authorization': authString ? `Basic ${authString}` : '',
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      console.error('代理请求失败:', { status: response.status, statusText: response.statusText, headers: response.headers });
+      throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
+    }
+
+    const contentType = response.headers.get('Content-Type');
+    console.log('收到响应Content-Type:', contentType);
+
+    if (!contentType || !contentType.includes('multipart/x-mixed-replace')) {
+      throw new Error('收到的不是MJPEG流，Content-Type: ' + contentType);
+    }
+
+    // 提取boundary字符串
+    const boundaryMatch = /boundary=(.+)/.exec(contentType);
+    if (!boundaryMatch) {
+      throw new Error('无法从Content-Type中找到boundary');
+    }
+    const boundary = boundaryMatch[1]; // 修正：直接使用匹配到的boundary字符串，因为它已经包含了--
+
+    // MJPEG流的实际帧边界通常是 \r\n--boundary_string
+    const fullBoundaryPatternBytes = new TextEncoder().encode(`\r\n${boundary}`);
+    const doubleCRLF = new Uint8Array([13, 10, 13, 10]); // \r\n\r\n
+    console.log('MJPEG Boundary (extracted):', boundary);
+    console.log('MJPEG Full Boundary Pattern Bytes:', fullBoundaryPatternBytes);
+
+    const reader = response.body.getReader();
+    let buffer = new Uint8Array(0);
+
+    while (true) {
+      if (mjpegStreamReader.aborted) {
+        console.log('MJPEG流读取已取消。');
+        break;
+      }
+
+      const { done, value } = await reader.read();
+      console.log(`读取到数据块: done=${done}, value.length=${value ? value.length : 0}`);
+      
+      if (done) {
+        console.log('MJPEG流已结束。');
+        break;
+      }
+
+      // 追加到缓冲区
+      const newBuffer = new Uint8Array(buffer.length + value.length);
+      newBuffer.set(buffer);
+      newBuffer.set(value, buffer.length);
+      buffer = newBuffer;
+      console.log('当前缓冲区大小:', buffer.length);
+
+      let boundaryStart = -1;
+      // 每次循环都尝试找到下一个完整的帧
+      while ((boundaryStart = findBoundary(buffer, fullBoundaryPatternBytes)) !== -1) {
+        console.log('找到帧起始边界索引:', boundaryStart);
+
+        // 查找下一个边界，以确定当前帧的结束
+        // 从当前边界的末尾开始查找，以避免重复查找当前边界
+        const searchStartIndexForNextBoundary = boundaryStart + fullBoundaryPatternBytes.length;
+        let nextBoundaryRelativeIndex = findBoundary(buffer.slice(searchStartIndexForNextBoundary), fullBoundaryPatternBytes);
+
+        if (nextBoundaryRelativeIndex !== -1) {
+          const nextBoundaryAbsoluteIndex = searchStartIndexForNextBoundary + nextBoundaryRelativeIndex;
+          console.log('找到下一帧起始边界索引:', nextBoundaryAbsoluteIndex);
+
+          // 提取当前帧（包含头部和图像数据）
+          const currentFrameSegment = buffer.slice(boundaryStart + fullBoundaryPatternBytes.length, nextBoundaryAbsoluteIndex);
+
+          // 在当前帧段中查找 \r\n\r\n (双回车换行) 来确定头部结束和图像数据开始
+          let headerEndIndex = -1;
+          for (let i = 0; i < currentFrameSegment.length - doubleCRLF.length; i++) {
+            if (currentFrameSegment[i] === doubleCRLF[0] &&
+                currentFrameSegment[i+1] === doubleCRLF[1] &&
+                currentFrameSegment[i+2] === doubleCRLF[2] &&
+                currentFrameSegment[i+3] === doubleCRLF[3]) {
+                headerEndIndex = i + doubleCRLF.length;
+                break;
+            }
+          }
+
+          if (headerEndIndex !== -1) {
+            const imageData = currentFrameSegment.slice(headerEndIndex);
+            console.log('成功提取图像数据，大小:', imageData.length);
+
+            // 检查是否是有效的JPEG数据 (简单的头部检查)
+            if (imageData.length > 4 && imageData[0] === 0xFF && imageData[1] === 0xD8 && imageData[2] === 0xFF && (imageData[3] === 0xE0 || imageData[3] === 0xE1)) {
+              try {
+                const blob = new Blob([imageData], { type: 'image/jpeg' });
+                // 如果正在录制，则保存帧
+                if (isRecording.value) {
+                  recordedFrames.value.push(blob);
+                }
+
+                const imageUrl = URL.createObjectURL(blob);
+                const img = new Image();
+                
+                img.onload = () => {
+                  if (canvasElement) {
+                    // 清空canvas并绘制图像
+                    ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+                    // 保持宽高比填充
+                    const aspectRatio = img.width / img.height;
+                    let drawWidth = canvasElement.width;
+                    let drawHeight = drawWidth / aspectRatio;
+
+                    if (drawHeight > canvasElement.height) {
+                      drawHeight = canvasElement.height;
+                      drawWidth = drawHeight * aspectRatio;
+                    }
+                    const x = (canvasElement.width - drawWidth) / 2;
+                    const y = (canvasElement.height - drawHeight) / 2;
+
+                    ctx.drawImage(img, x, y, drawWidth, drawHeight);
+                  }
+                  URL.revokeObjectURL(imageUrl);
+                };
+                img.onerror = (e) => {
+                  console.error('图像加载失败:', e);
+                  URL.revokeObjectURL(imageUrl);
+                };
+                img.src = imageUrl;
+              } catch (e) {
+                console.error('处理图像失败:', e);
+              }
+            } else {
+              console.warn('跳过非JPEG图像数据或不完整数据，大小:', imageData.length);
+            }
+          } else {
+            console.warn('未找到图像头部结束标记 (\r\n\r\n) 在当前帧段中，段大小:', currentFrameSegment.length);
+          }
+
+          // 裁剪缓冲区，移除已处理的帧
+          buffer = buffer.slice(nextBoundaryAbsoluteIndex);
+        } else {
+          // 没有找到下一个边界，意味着需要更多数据来完成当前帧
+          break; // 跳出内部while循环，等待更多数据
+        }
+      }
+    }
+  } catch (error) {
+    if (error.name !== 'AbortError') {
+      console.error('MJPEG流处理失败:', error);
+      // ElMessage.error('MJPEG流播放失败: ' + error.message);
+    }
+  } finally {
+    if (reader) {
+      reader.releaseLock();
+    }
+    mjpegStreamReader = null;
+    controller = null;
+  }
+};
+
+// 查找字节数组中的子数组 (用于查找MJPEG边界)
+const findBoundary = (buffer, searchBytes) => {
+  for (let i = 0; i < buffer.length - searchBytes.length; i++) {
+    let found = true;
+    for (let j = 0; j < searchBytes.length; j++) {
+      if (buffer[i + j] !== searchBytes[j]) {
+        found = false;
+        break;
+      }
+    }
+    if (found) {
+      return i;
+    }
+  }
+  return -1;
+};
+
+// 回放函数
+const startPlayback = () => {
+  if (recordedFrames.value.length === 0) {
+    ElMessage.warning('没有录制的视频帧可供回放。');
+    return;
+  }
+  // 停止当前实时监控（如果正在进行）
+  if (mjpegStreamReader) {
+    mjpegStreamReader.abort();
+    mjpegStreamReader = null;
+  }
+  if (flvPlayerInstance) {
+    flvPlayerInstance.destroy();
+    flvPlayerInstance = null;
+  }
+
+  isPlayingback.value = true;
+  currentPlaybackFrameIndex = 0; // 从第一帧开始回放
+  ElMessage.success('开始回放录制的视频！');
+
+  const canvasElement = canvasRef.value;
+  if (!canvasElement) {
+    ElMessage.error('找不到Canvas播放器元素进行回放。');
+    stopPlayback();
+    return;
+  }
+  const ctx = canvasElement.getContext('2d');
+  ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+  // 设置回放帧率，假设每秒25帧，则每帧间隔 1000 / 25 = 40ms
+  const frameInterval = 40; 
+
+  playbackTimer = setInterval(() => {
+    if (currentPlaybackFrameIndex < recordedFrames.value.length) {
+      const blob = recordedFrames.value[currentPlaybackFrameIndex];
+      const imageUrl = URL.createObjectURL(blob);
+      const img = new Image();
+
+      img.onload = () => {
+        if (canvasElement) {
+          ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+          const aspectRatio = img.width / img.height;
+          let drawWidth = canvasElement.width;
+          let drawHeight = drawWidth / aspectRatio;
+
+          if (drawHeight > canvasElement.height) {
+            drawHeight = canvasElement.height;
+            drawWidth = drawHeight * aspectRatio;
+          }
+          const x = (canvasElement.width - drawWidth) / 2;
+          const y = (canvasElement.height - drawHeight) / 2;
+          ctx.drawImage(img, x, y, drawWidth, drawHeight);
+        }
+        URL.revokeObjectURL(imageUrl);
+      };
+      img.onerror = (e) => {
+        console.error('回放图像加载失败:', e);
+        URL.revokeObjectURL(imageUrl);
+      };
+      img.src = imageUrl;
+      currentPlaybackFrameIndex++;
+    } else {
+      // 回放结束，停止定时器并重置状态
+      stopPlayback();
+      ElMessage.info('回放结束。');
+      // 可以选择在这里重新开始回放或者回到实时监控
+      // 例如：startPlayback(); // 循环回放
+    }
+  }, frameInterval);
+};
+
+const stopPlayback = () => {
+  if (playbackTimer) {
+    clearInterval(playbackTimer);
+    playbackTimer = null;
+  }
+  isPlayingback.value = false;
+  ElMessage.info('回放已停止。');
+};
+
+// 组件挂载时获取摄像头列表
+    onMounted(() => {
+  getCameraList();
+});
+
+// 组件卸载时清理资源
+onUnmounted(() => {
+  if (flvPlayerInstance) {
+    flvPlayerInstance.destroy();
+    flvPlayerInstance = null;
+  }
+  if (mjpegStreamReader) {
+      mjpegStreamReader.abort(); // 中止Fetch请求
+      mjpegStreamReader = null;
+  }
+  stopPlayback(); // 停止回放
+  clearRecordedFrames(); // 清理录制帧
+});
 </script>
 
-<style lang="scss" scoped>
-/* 保持您原有的样式 */
-.statistics-page-styles {
+<style scoped>
+.statistics-container {
   padding: 20px;
 }
-.page-header {
+
+.card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
 }
 
-.page-header h1 {
-  margin: 0;
+.video-player-container {
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  overflow: hidden;
+  height: 500px; /* 固定高度 */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
 }
 
-.actions {
+.video-box {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: black;
+}
+
+.video-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f0f2f5;
+  color: #909399;
+  font-size: 20px;
+}
+
+.video-controls {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 10px;
+  border-radius: 5px;
   display: flex;
   gap: 10px;
 }
 
-.summary-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
-}
-
-.summary-card {
-  background-color: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  text-align: center;
-}
-
-.summary-card h3 {
-  margin-top: 0;
-  margin-bottom: 10px;
-  font-size: 1em;
-  color: #555;
-}
-
-.summary-card .count {
-  font-size: 2em;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 5px;
-}
-
-.summary-card .change {
-  font-size: 0.9em;
-}
-
-.summary-card .change.positive {
-  color: green;
-}
-
-.summary-card .change.negative {
-  color: red;
-}
-
-.charts-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-}
-
-.chart-container {
-  background-color: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.chart-container h4 {
-  text-align: center;
-  margin-top: 0;
-  margin-bottom: 15px;
-}
-
-.chart-placeholder {
-  min-height: 200px; /* 或者根据您的图表实际高度调整 */
+.camera-list-container {
+  height: 100%;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #f0f0f0;
-  border-radius: 4px;
-  color: #777;
-}
-
-.no-permission-message {
-  text-align: center;
-  padding: 50px;
-  color: #777;
-}
-.no-permission-message h2 {
-  color: #dc3545;
-  margin-bottom: 10px;
-}
-
-.export-btn {
-  padding: 8px 15px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.export-btn:hover {
-  background-color: #0056b3;
-}
-
-select {
-  padding: 8px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
+  flex-direction: column;
 }
 </style>

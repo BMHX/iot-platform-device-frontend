@@ -151,21 +151,21 @@ export default {
     const svgChartWidth = ref(800)
     const svgChartHeight = ref(300)
     const kpis = ref({
-      onlineDevices: 0,
-      onlineDevicesChange: 0,
-      alarmsToday: 0,
-      alarmsTodayChange: 0,
-      dataThroughput: 0,
-      messageRate: 0,
+        onlineDevices: 0,
+        onlineDevicesChange: 0,
+        alarmsToday: 0,
+        alarmsTodayChange: 0,
+        dataThroughput: 0,
+        messageRate: 0,
     })
     const deviceStatus = ref({
-      online: 0,
-      offline: 0,
-      error: 0,
+        online: 0,
+        offline: 0,
+        error: 0,
     })
     const recentAlarms = ref([])
     const onlineDevicesHistory = ref([])
-    const maxHistoryPoints = 20
+    const maxHistoryPoints = 100
     const intervalId = ref(null)
     const dataUpdateIntervalId = ref(null)
     const alarmIdCounter = ref(1)
@@ -338,7 +338,7 @@ export default {
         value: kpis.value.onlineDevices
       })
 
-      // 保持最近20个数据点
+      // 保持最近100个数据点
       if (history.length > maxHistoryPoints) {
         history = history.slice(-maxHistoryPoints)
       }
@@ -483,10 +483,10 @@ export default {
         currentTime.value = new Date().toLocaleTimeString()
       }, 1000)
 
-      // 每30秒更新一次数据
+      // 每10秒更新一次数据
       dataUpdateIntervalId.value = setInterval(() => {
         getDeviceList()
-      }, 30000)
+      }, 10000)
     }
 
     // 在组件挂载时加载地图
@@ -715,8 +715,8 @@ export default {
   gap: 10px;
   padding: 10px;
 }
-
-.status-item {
+  
+  .status-item {
   display: flex;
   justify-content: center;
   margin-bottom: 10px;

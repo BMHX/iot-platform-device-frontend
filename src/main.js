@@ -13,6 +13,7 @@ axios.defaults.baseURL = 'http://localhost:8087';
 axios.defaults.withCredentials = true; // 允许跨域携带cookie
 axios.defaults.headers.common['Content-Type'] = 'application/json';
 axios.defaults.headers.common['Accept'] = 'application/json';
+axios.defaults.timeout = 5000;
 
 // 请求拦截器
 axios.interceptors.request.use(
@@ -31,9 +32,7 @@ axios.interceptors.request.use(
 
 // 响应拦截器
 axios.interceptors.response.use(
-  response => {
-    return response
-  },
+  response => response,
   error => {
     console.error('响应错误:', error)
     if (error.response) {
